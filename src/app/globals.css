@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Mirror tailwind.config.ts tokens for runtime use */
+    --paper: #faf8f4;
+    --bg-elev: #fffefb;
+    --ink: #1b1a17;
+    --ink-2: #3a3833;
+    --ink-3: #6b6760;
+    --ink-4: #a09b92;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  /* Subtle paper texture — used on atom backgrounds for warmth */
+  .paper-tex {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(0, 0, 0, 0.03) 1px,
+      transparent 0
+    );
+    background-size: 12px 12px;
+  }
+
+  /* Mono utility for tiny metadata */
+  .tiny-mono {
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 11px;
+    color: var(--ink-4);
+    letter-spacing: 0.02em;
+  }
+}
