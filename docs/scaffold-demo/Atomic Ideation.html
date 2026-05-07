@@ -1,0 +1,3821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Atomic Ideation — Research Canvas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+/* ===== Atomic Ideation — Research Canvas =====
+   Warm off-white base, hand-drawn feel, three radically different atom types.
+*/
+
+:root {
+  /* Surface tones */
+  --bg-deep: #F2EEE6;
+  --bg: #FAF8F4;
+  --bg-elev: #FFFFFF;
+  --bg-tint: #F6F2EA;
+  --paper: #FBF8F2;
+
+  /* Ink */
+  --ink: #1A1A1A;
+  --ink-2: #3D3935;
+  --ink-3: #6B6760;
+  --ink-4: #9A958C;
+  --ink-5: #C7C2B8;
+  --line: #E5DFD3;
+  --line-2: #EFEAE0;
+
+  /* Accent */
+  --amber: oklch(72% 0.13 65);
+  --amber-soft: oklch(94% 0.04 65);
+  --amber-ink: oklch(40% 0.12 60);
+
+  /* Reactions */
+  --support: oklch(64% 0.14 145);
+  --challenge: oklch(62% 0.18 25);
+  --refine: oklch(60% 0.13 240);
+  --question: oklch(75% 0.13 85);
+  --cite: oklch(56% 0.16 305);
+
+  /* User colors (each contributor) */
+  --u-rose:    oklch(82% 0.08 20);
+  --u-amber:   oklch(86% 0.09 75);
+  --u-citron:  oklch(88% 0.10 110);
+  --u-mint:    oklch(85% 0.07 160);
+  --u-sky:     oklch(85% 0.07 230);
+  --u-iris:    oklch(82% 0.08 285);
+  --u-clay:    oklch(80% 0.05 50);
+
+  /* Shadows */
+  --sh-1: 0 1px 2px rgba(60,50,30,.06), 0 1px 1px rgba(60,50,30,.04);
+  --sh-2: 0 2px 8px rgba(60,50,30,.08), 0 1px 3px rgba(60,50,30,.05);
+  --sh-3: 0 8px 24px rgba(60,50,30,.10), 0 2px 6px rgba(60,50,30,.06);
+  --sh-paper: 0 1px 0 rgba(255,255,255,.6) inset, 0 1px 2px rgba(60,50,30,.08), 0 4px 12px rgba(60,50,30,.06);
+
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 14px;
+  --r-4: 20px;
+
+  /* Type */
+  --f-sans: 'Inter', system-ui, sans-serif;
+  --f-hand: 'Caveat', 'Bradley Hand', cursive;
+  --f-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --f-serif: 'Newsreader', Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--f-sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'cv11';
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root { height: 100vh; width: 100vw; overflow: hidden; }
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* ===== Paper Texture Background ===== */
+.paper-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(180,160,120,.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(140,120,100,.03) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 23px,
+      rgba(180,160,120,.025) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 23px,
+      rgba(180,160,120,.02) 24px
+    );
+}
+
+/* ===== Top Nav (persistent breadcrumb) ===== */
+.topnav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 50;
+  background: rgba(250, 248, 244, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.topnav-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--f-serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  width: 22px; height: 22px;
+  position: relative;
+  display: inline-block;
+}
+.brand-mark::before, .brand-mark::after {
+  content: ""; position: absolute; border-radius: 50%;
+}
+.brand-mark::before {
+  width: 14px; height: 14px;
+  background: var(--ink);
+  top: 0; left: 0;
+}
+.brand-mark::after {
+  width: 10px; height: 10px;
+  border: 1.5px dashed var(--ink-3);
+  bottom: 0; right: 0;
+  background: var(--bg-elev);
+}
+
+.crumbs {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: 24px;
+  font-size: 13px;
+  color: var(--ink-3);
+  flex: 1;
+}
+.crumb {
+  padding: 4px 8px; border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.crumb:hover { background: var(--bg-tint); color: var(--ink); }
+.crumb.active { color: var(--ink); font-weight: 500; }
+.crumb-sep { color: var(--ink-5); }
+
+.topnav-right {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.topnav-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-tint);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--ink-3);
+  width: 240px;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+.topnav-search:hover { border-color: var(--ink-5); }
+.topnav-search kbd {
+  margin-left: auto;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  background: var(--bg-elev);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+
+.icon-btn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  color: var(--ink-3);
+  position: relative;
+}
+.icon-btn:hover { background: var(--bg-tint); color: var(--ink); }
+.icon-btn .badge {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--challenge);
+  border: 1.5px solid var(--bg);
+}
+
+.avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  border: 1.5px solid var(--bg);
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+
+/* ===== Reaction colors ===== */
+.r-support { color: var(--support); }
+.r-challenge { color: var(--challenge); }
+.r-refine { color: var(--refine); }
+.r-question { color: var(--question); }
+.r-cite { color: var(--cite); }
+
+.r-bg-support { background: color-mix(in oklch, var(--support) 14%, white); }
+.r-bg-challenge { background: color-mix(in oklch, var(--challenge) 14%, white); }
+.r-bg-refine { background: color-mix(in oklch, var(--refine) 14%, white); }
+.r-bg-question { background: color-mix(in oklch, var(--question) 16%, white); }
+.r-bg-cite { background: color-mix(in oklch, var(--cite) 14%, white); }
+
+/* ===== Atom — Human (Sticky note) ===== */
+.atom {
+  position: absolute;
+  user-select: none;
+  cursor: pointer;
+  transform-origin: center;
+  transition: transform 200ms cubic-bezier(.2,.7,.3,1.1), box-shadow 160ms, opacity 200ms;
+}
+.atom:hover { z-index: 5; }
+
+.atom-human {
+  padding: 12px 14px 14px;
+  border-radius: 4px 4px 4px 14px;
+  box-shadow: var(--sh-paper);
+  font-family: var(--f-hand);
+  font-size: 19px;
+  line-height: 1.18;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(0,0,0,0.04);
+  position: relative;
+}
+.atom-human::after {
+  /* tape */
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 28px; height: 12px;
+  background: rgba(255,255,255,.45);
+  border: 1px solid rgba(0,0,0,.04);
+  pointer-events: none;
+  display: none;
+}
+.atom-human:hover { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1.04); box-shadow: var(--sh-3); }
+.atom-human.has-tape::after { display: block; }
+
+.atom-human .meta {
+  margin-top: 8px;
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--f-sans);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+.atom-human .meta .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ===== Atom — Literature (Dark flat card) ===== */
+.atom-lit {
+  background: #2A2724;
+  color: #EBE6DA;
+  border-radius: 3px;
+  font-family: var(--f-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: var(--sh-2);
+  overflow: hidden;
+  border: 1px solid #1A1815;
+}
+.atom-lit:hover { transform: translate(-50%, -50%) scale(1.04); box-shadow: var(--sh-3); }
+
+.atom-lit .lit-meta {
+  background: #1F1D1A;
+  padding: 5px 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: #9A958C;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #383532;
+}
+.atom-lit .lit-meta .lit-icon {
+  width: 10px; height: 10px;
+  display: inline-block;
+  border: 1.5px solid currentColor;
+  border-bottom: 4px double currentColor;
+  flex-shrink: 0;
+}
+.atom-lit .lit-body { padding: 9px 10px 11px; font-size: 12px; line-height: 1.42;}
+.atom-lit .lit-cite {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: #8A857C;
+  margin-top: 6px;
+}
+
+/* ===== Atom — AI (Dashed, ghostly) ===== */
+.atom-ai {
+  background: rgba(255,255,255,.5);
+  border: 1.5px dashed var(--ink-4);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-family: var(--f-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  backdrop-filter: blur(2px);
+  position: relative;
+}
+.atom-ai:hover { transform: translate(-50%, -50%) scale(1.04); border-color: var(--ink-3); background: rgba(255,255,255,.85); }
+.atom-ai .ai-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.atom-ai .ai-tag::before {
+  content: ""; width: 8px; height: 8px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--ink-3) 0 25%, transparent 0 50%);
+  opacity: 0.6;
+}
+
+/* atom selected */
+.atom.selected .atom-human,
+.atom.selected .atom-lit,
+.atom.selected .atom-ai {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* atom highlight (from summary click) */
+.atom.highlight {
+  animation: atomPulse 1.6s ease-out;
+}
+@keyframes atomPulse {
+  0% { box-shadow: 0 0 0 0 oklch(72% 0.13 65 / 0.5); }
+  60% { box-shadow: 0 0 0 18px oklch(72% 0.13 65 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(72% 0.13 65 / 0); }
+}
+
+/* ===== Subtopic cluster halo ===== */
+.cluster-halo {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px dashed rgba(180,160,120,0.35);
+  background: radial-gradient(circle, rgba(255,253,247,0.45) 0%, rgba(255,253,247,0) 70%);
+}
+.cluster-label {
+  position: absolute;
+  font-family: var(--f-serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-3);
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* ===== Reaction edges (SVG) ===== */
+.edge-support { stroke: var(--support); stroke-width: 1.5; fill: none; }
+.edge-challenge { stroke: var(--challenge); stroke-width: 1.5; fill: none; stroke-dasharray: 3 2; }
+.edge-refine { stroke: var(--refine); stroke-width: 1.5; fill: none; }
+.edge-question { stroke: var(--question); stroke-width: 1.5; fill: none; stroke-dasharray: 6 2 1 2; }
+.edge-cite { stroke: var(--cite); stroke-width: 1.5; fill: none; }
+.edge-weak { stroke: var(--ink-5); stroke-width: 1; fill: none; stroke-dasharray: 2 4; opacity: 0.6;}
+
+/* ===== Pan/zoom canvas ===== */
+.canvas-host {
+  position: absolute;
+  top: 56px; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+.canvas-host.grabbing { cursor: grabbing; }
+.canvas-stage {
+  position: absolute;
+  transform-origin: 0 0;
+  width: 4000px; height: 3000px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  color: var(--ink);
+  transition: all 120ms;
+}
+.btn:hover { border-color: var(--ink-4); transform: translateY(-1px); box-shadow: var(--sh-1); }
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn-primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn-amber {
+  background: var(--amber);
+  color: white;
+  border-color: var(--amber);
+}
+.btn-amber:hover { filter: brightness(1.05); }
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-3);
+}
+.btn-ghost:hover { background: var(--bg-tint); color: var(--ink); }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+/* Chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--bg-tint);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.chip .swatch { width: 9px; height: 9px; border-radius: 50%; }
+
+/* Cards */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--sh-1);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-5); border: 2px solid transparent; background-clip: padding-box; }
+
+/* Tweaks panel overrides */
+.tw-panel { font-family: var(--f-sans) !important; }
+
+/* ===== Modal ===== */
+.modal-back {
+  position: fixed; inset: 0;
+  background: rgba(45, 40, 30, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px;
+}
+.modal {
+  background: var(--bg);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+  max-width: 720px; width: 100%;
+  max-height: 88vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+}
+
+/* Right drawer */
+.drawer {
+  position: fixed;
+  top: 56px; right: 0; bottom: 0;
+  width: 380px;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--line);
+  z-index: 40;
+  overflow-y: auto;
+  box-shadow: -8px 0 30px rgba(60,50,30,0.06);
+}
+
+/* ===== Onboarding overlay ===== */
+.onboard-back {
+  position: fixed; inset: 0;
+  background: rgba(45, 40, 30, 0.55);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+}
+.onboard-card {
+  background: var(--bg);
+  border-radius: 20px;
+  width: 540px;
+  padding: 36px 36px 28px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+  border: 1px solid var(--line);
+  position: relative;
+}
+
+/* tooltip pointer for onboarding spotlights */
+.spotlight {
+  position: absolute;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 12px 14px;
+  border-radius: 12px;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  z-index: 201;
+}
+.spotlight::after {
+  content: "";
+  position: absolute;
+  width: 10px; height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.spotlight.pos-bottom::after { top: -5px; left: 24px; }
+.spotlight.pos-top::after { bottom: -5px; left: 24px; }
+.spotlight.pos-left::after { right: -5px; top: 18px; }
+.spotlight.pos-right::after { left: -5px; top: 18px; }
+
+/* utility */
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.gap-6 { gap: 24px; }
+.muted { color: var(--ink-3); }
+.tiny { font-size: 11px; }
+.mono { font-family: var(--f-mono); }
+.serif { font-family: var(--f-serif); }
+.hand { font-family: var(--f-hand); }
+.italic { font-style: italic; }
+
+/* SVG dotted icon for "AI" */
+.ai-orb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.6), transparent 50%),
+    conic-gradient(var(--ink-3) 0 25%, transparent 0 50%, var(--ink-3) 0 75%, transparent 0 100%);
+  display: inline-block;
+}
+
+/* progress bar */
+.progress {
+  width: 100%; height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress > span {
+  display: block; height: 100%;
+  background: var(--amber);
+  transition: width 240ms ease;
+}
+
+/* Maturity meter (rings) */
+.maturity {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.maturity .ring {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-4);
+}
+.maturity .ring.full { background: var(--amber); border-color: var(--amber); }
+.maturity .ring.half { background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); }
+
+/* Filter toolbar */
+.toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-1);
+  z-index: 30;
+}
+.toolbar .seg {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all 120ms;
+}
+.toolbar .seg:hover { background: var(--bg-tint); color: var(--ink); }
+.toolbar .seg.active { background: var(--ink); color: var(--bg); }
+.toolbar .seg.muted-tone { opacity: 0.4; }
+.toolbar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+
+/* Minimap */
+.minimap {
+  position: absolute;
+  bottom: 20px; right: 20px;
+  width: 200px; height: 130px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--sh-2);
+  overflow: hidden;
+  z-index: 30;
+}
+.minimap-viewport {
+  position: absolute;
+  border: 1.5px solid var(--ink);
+  background: rgba(255,200,80,0.15);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* zoom controls */
+.zoom-ctl {
+  position: absolute;
+  bottom: 20px; left: 20px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+  z-index: 30;
+}
+.zoom-ctl button {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-mono);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.zoom-ctl button:hover { background: var(--bg-tint); }
+.zoom-ctl .div { height: 1px; background: var(--line); }
+
+/* input area */
+.input-dock {
+  position: absolute;
+  bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 70vw);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: var(--sh-3);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.input-dock input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--f-sans);
+  font-size: 14px;
+  color: var(--ink);
+  padding: 8px 6px;
+}
+.input-dock input::placeholder { color: var(--ink-4); }
+
+/* level transitions */
+.level-fade-enter { opacity: 0; transform: scale(0.96); }
+.level-fade-enter-active { opacity: 1; transform: scale(1); transition: all 320ms cubic-bezier(.2,.7,.3,1); }
+
+/* user dot color helpers */
+.dot-rose { color: var(--u-rose); }
+.dot-amber { color: var(--u-amber); }
+.dot-citron { color: var(--u-citron); }
+.dot-mint { color: var(--u-mint); }
+.dot-sky { color: var(--u-sky); }
+.dot-iris { color: var(--u-iris); }
+.dot-clay { color: var(--u-clay); }
+
+/* zigzag line generator (SVG path approach) — for challenge */
+.zig { stroke-dasharray: 2 2; }
+
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" data-presets="react">
+// ===== data.jsx =====
+// ===== Static demo data for Atomic Ideation =====
+// Domains, Topics, Subtopics, Atoms, Reactions, Users, Lit references.
+
+window.AppData = (function () {
+  const users = [
+    { id: 'u-mei',    name: 'Mei Lin',     role: 'PhD · HCI',          color: 'rose',   colorVar: 'var(--u-rose)',   bg: 'oklch(94% 0.06 20)' },
+    { id: 'u-ravi',   name: 'Ravi Shah',   role: 'Designer',           color: 'amber',  colorVar: 'var(--u-amber)',  bg: 'oklch(95% 0.07 75)' },
+    { id: 'u-jules',  name: 'Jules Park',  role: 'Engineer · ML',      color: 'citron', colorVar: 'var(--u-citron)', bg: 'oklch(96% 0.08 110)' },
+    { id: 'u-sora',   name: 'Sora Aoki',   role: 'Cog. Sci.',          color: 'mint',   colorVar: 'var(--u-mint)',   bg: 'oklch(94% 0.06 160)' },
+    { id: 'u-noor',   name: 'Noor Aziz',   role: 'Education',          color: 'sky',    colorVar: 'var(--u-sky)',    bg: 'oklch(94% 0.06 230)' },
+    { id: 'u-finn',   name: 'Finn Ortiz',  role: 'Sociologist',        role2: 'Sociology', color: 'iris', colorVar: 'var(--u-iris)', bg: 'oklch(93% 0.07 285)' },
+    { id: 'u-you',    name: 'You',         role: 'New contributor',    color: 'clay',   colorVar: 'var(--u-clay)',   bg: 'oklch(91% 0.04 50)', isYou: true },
+  ];
+
+  // Domain Lobby (Level 1)
+  const domains = [
+    {
+      id: 'd-edu', title: 'AI for Education',
+      blurb: 'Tutors, assessment, equity, learner agency.',
+      subtopics: 14, contributors: 87, recent: '4m ago',
+      maturityCount: 3, suggested: true,
+      yourColorMatch: 0.78, kind: 'recommended',
+    },
+    {
+      id: 'd-research', title: 'AI for Research',
+      blurb: 'Discovery, synthesis, peer review, reproducibility.',
+      subtopics: 11, contributors: 64, recent: '12m ago',
+      maturityCount: 2, suggested: true,
+      yourColorMatch: 0.62, kind: 'recommended',
+    },
+    {
+      id: 'd-culture', title: 'AI for Culture',
+      blurb: 'Heritage, translation, creativity, archives.',
+      subtopics: 8, contributors: 41, recent: '1h ago',
+      maturityCount: 1, kind: 'recommended',
+      yourColorMatch: 0.41,
+    },
+    {
+      id: 'd-xr', title: 'AI for XR',
+      blurb: 'Spatial agents, embodied learning, mixed reality.',
+      subtopics: 6, contributors: 22, recent: '3h ago',
+      maturityCount: 0, kind: 'community',
+      yourColorMatch: 0.18,
+    },
+    {
+      id: 'd-care', title: 'AI for Care',
+      blurb: 'Mental health, elder care, accessibility.',
+      subtopics: 9, contributors: 53, recent: '22m ago',
+      maturityCount: 2, kind: 'community',
+      yourColorMatch: 0.27,
+    },
+    {
+      id: 'd-civic', title: 'AI for Civic Life',
+      blurb: 'Deliberation, public services, accountability.',
+      subtopics: 5, contributors: 18, recent: '5h ago',
+      maturityCount: 0, kind: 'community',
+      yourColorMatch: 0.31,
+    },
+  ];
+
+  // Topics inside d-edu (Level 2)
+  const topics = [
+    {
+      id: 't-tutor', title: 'Adaptive Tutoring',
+      tagline: 'Tutors that meet learners where they are — and step back when they shouldn\'t.',
+      x: 280, y: 240, w: 720, h: 520,
+      hue: 'oklch(96% 0.04 65)',
+      contributors: 24,
+      subtopicIds: ['s-meta', 's-scaffold', 's-dialogic'],
+    },
+    {
+      id: 't-equity', title: 'Equity & Access',
+      tagline: 'Whose learner does an adaptive system imagine, and who does that imagining leave out?',
+      x: 1160, y: 220, w: 640, h: 480,
+      hue: 'oklch(96% 0.03 145)',
+      contributors: 17,
+      subtopicIds: ['s-equity', 's-multilingual'],
+    },
+    {
+      id: 't-assess', title: 'Assessment & Feedback',
+      tagline: 'When a tutor evaluates, what does it teach the learner to optimize?',
+      x: 1900, y: 480, w: 700, h: 540,
+      hue: 'oklch(96% 0.04 240)',
+      contributors: 19,
+      subtopicIds: ['s-formative', 's-rubric'],
+    },
+    {
+      id: 't-agency', title: 'Learner Agency',
+      tagline: 'The parts of learning the system has no business doing for you.',
+      x: 380, y: 940, w: 700, h: 460,
+      hue: 'oklch(96% 0.04 25)',
+      contributors: 14,
+      subtopicIds: ['s-selfreg', 's-curiosity'],
+    },
+    {
+      id: 't-teacher', title: 'Teacher Workflows',
+      tagline: 'The classroom doesn\'t disappear when the AI shows up.',
+      x: 1280, y: 880, w: 620, h: 480,
+      hue: 'oklch(96% 0.04 285)',
+      contributors: 13,
+      subtopicIds: ['s-teacher'],
+    },
+  ];
+
+  // Subtopics — clusters inside topics; each has a position relative to canvas
+  const subtopics = [
+    { id: 's-meta',        topicId: 't-tutor',  title: 'Metacognition Support',     x: 460,  y: 380, atomCount: 9,  contributors: 5, lit: 3, maturity: 0.72, hot: true,
+      blurb: 'Helping learners notice their own thinking — when to ask, when to back off.',
+      framing: "When does pointing out a learner's strategy help them, and when does it hijack the very reflection it tries to provoke? This subtopic sits at the friction between **assistance** and **awareness** — every AI move that names what a student just did changes whether the student would have noticed it themselves.",
+      tensions: [
+        { label: 'Naming → noticing', text: 'Explicit reflection prompts speed up metacognitive vocabulary…' },
+        { label: 'Naming → numbing', text: '…but also outsource the noticing the student should be doing.' },
+      ],
+      questions: [
+        'What\'s the smallest reflection prompt that still produces a change in study behavior 24h later?',
+        'Can metacognitive support be fully implicit — surfaced by the interface rather than the tutor?',
+        'How do you measure "notice" without prompting the noticing?',
+      ],
+    },
+    { id: 's-scaffold',    topicId: 't-tutor',  title: 'Adaptive Scaffolding',      x: 760,  y: 600, atomCount: 11, contributors: 6, lit: 4, maturity: 0.85, hot: true,
+      blurb: 'Calibrating help to learner state without removing productive struggle.',
+      framing: "Scaffolds are a paradox: they exist to be removed. Too sturdy and the learner never builds the muscle; too flimsy and the learner falls. **Adaptive scaffolding** asks whether AI tutors can read the gap between *can do* and *can do alone* in real time — and back off the moment the gap closes.",
+      tensions: [
+        { label: 'Help when stuck', text: 'Quick, contingent assistance prevents disengagement…' },
+        { label: 'Productive failure', text: '…yet some failure must be felt for learning to stick.' },
+      ],
+      questions: [
+        'What signal best distinguishes "stuck-and-learning" from "stuck-and-spiraling"?',
+        'Should scaffolding granularity match cognitive grain (sub-step) or phenomenological grain (whole problem)?',
+        'When teachers override AI scaffolds, what are they correcting — the model, the policy, or the framing?',
+      ],
+    },
+    { id: 's-dialogic',    topicId: 't-tutor',  title: 'Dialogic Tutoring',         x: 380,  y: 620, atomCount: 6,  contributors: 3, lit: 2, maturity: 0.45,
+      blurb: 'Socratic, multi-turn, repair-oriented dialogue patterns.',
+      framing: "Tutoring as conversation, not delivery. The learner's wrong turn becomes an invitation, not an error to patch. **Dialogic tutoring** treats every misstep as a place to repair — but AI tutors are notoriously bad at sitting with a wrong answer long enough for the learner to find their own way out.",
+      tensions: [
+        { label: 'Patience vs. progress', text: 'Real Socratic moves take dozens of turns…' },
+        { label: 'Repair vs. retreat', text: '…and learners often want the answer, not the dialogue.' },
+      ],
+      questions: [
+        'Can a tutor refuse to give the answer without feeling withholding?',
+        'What does "successful repair" look like, distinct from "got the right answer"?',
+      ],
+    },
+    { id: 's-equity',      topicId: 't-equity', title: 'Bias in Recommenders',      x: 1320, y: 380, atomCount: 7,  contributors: 4, lit: 3, maturity: 0.55,
+      blurb: 'How feedback signals reproduce inequity.',
+      framing: "Every adaptive system narrows the path it expects you to walk. When that path was paved by historical learner data, it's paved unevenly. **This subtopic asks whose struggle the model treats as a signal of effort, and whose it treats as a signal of incapacity** — and what kind of audit can catch the difference before it scales.",
+      tensions: [
+        { label: 'Personalization', text: 'Tailoring increases relevance for the median learner…' },
+        { label: 'Path narrowing', text: '…but compounds disadvantage for learners outside the median.' },
+      ],
+      questions: [
+        'Which feedback signals are most contaminated by demographic confounds?',
+        'Can "fairness through unawareness" work in tutoring, or must group identity be modeled to be corrected for?',
+      ],
+    },
+    { id: 's-multilingual',topicId: 't-equity', title: 'Multilingual Tutors',       x: 1560, y: 540, atomCount: 5,  contributors: 3, lit: 1, maturity: 0.38,
+      blurb: 'Code-switching, dialect, low-resource languages.',
+      framing: "Most tutoring research is monolingual; most learners are not. **Multilingual tutors** has to handle code-switching mid-explanation, dialect-as-signal-of-thinking, and the awkward fact that some concepts have no clean translation. The hard question isn't translation — it's whether the tutor lets the learner think in their own language.",
+      tensions: [
+        { label: 'Common medium', text: 'A shared language enables a global tutor…' },
+        { label: 'Native cognition', text: '…but reasoning is often stronger in the heritage language.' },
+      ],
+      questions: [
+        'Should the tutor switch languages when the learner does, or hold steady?',
+        'How do you evaluate a tutor\'s explanation quality across dialects without flattening dialect?',
+      ],
+    },
+    { id: 's-formative',   topicId: 't-assess', title: 'Formative Feedback',        x: 2080, y: 640, atomCount: 8,  contributors: 4, lit: 2, maturity: 0.62,
+      blurb: 'Loops between learner artifacts and AI commentary.',
+      framing: "Feedback that arrives after the assignment is dead. **Formative feedback** is the loop that reaches the learner mid-thought — close enough to revise, slow enough to not interrupt. AI can deliver feedback at any cadence; the design question is what cadence the *learner* can metabolize without dependence.",
+      tensions: [
+        { label: 'Frequency', text: 'More-frequent feedback shortens the revision loop…' },
+        { label: 'Friction', text: '…and trains learners to wait for it instead of evaluating themselves.' },
+      ],
+      questions: [
+        'What\'s the right delay between submission and AI feedback for self-evaluation to happen first?',
+        'Can formative feedback be made boring enough that learners stop optimizing for it?',
+      ],
+    },
+    { id: 's-rubric',      topicId: 't-assess', title: 'Rubric Co-design',          x: 2380, y: 800, atomCount: 4,  contributors: 2, lit: 1, maturity: 0.30,
+      blurb: 'Teachers + AI shaping evaluation criteria.',
+      framing: "Rubrics are where pedagogy gets concrete. **Rubric co-design** is the question of whether AI can help teachers write rubrics that are both reliable enough for AI to apply, and humane enough that they don't reduce learning to a checklist.",
+      tensions: [
+        { label: 'Operationalizable', text: 'AI needs criteria precise enough to measure…' },
+        { label: 'Generative', text: '…but learning happens at the edges of any criterion.' },
+      ],
+      questions: [
+        'What kinds of learning collapse the moment they\'re put into a rubric?',
+        'Can rubrics be co-authored fast enough to keep up with the topics teachers actually teach?',
+      ],
+    },
+    { id: 's-selfreg',     topicId: 't-agency', title: 'Self-regulation',           x: 600,  y: 1080,atomCount: 6,  contributors: 4, lit: 2, maturity: 0.50,
+      blurb: 'Goal setting, monitoring, reflection prompts.',
+      framing: "Self-regulation is the part of learning the AI can never do for you. **This subtopic** asks how a tutor can support the goal-setting, monitoring, and reflective revision that learners must do themselves — without becoming a crutch that does it on their behalf.",
+      tensions: [
+        { label: 'Structure', text: 'External structure (calendars, prompts) builds the habit…' },
+        { label: 'Internalization', text: '…but at some point structure has to disappear or it never becomes self-regulation.' },
+      ],
+      questions: [
+        'When should the tutor stop reminding?',
+        'Are there "self-regulation training wheels" that come off cleanly?',
+      ],
+    },
+    { id: 's-curiosity',   topicId: 't-agency', title: 'Curiosity & Choice',        x: 880,  y: 1240,atomCount: 5,  contributors: 3, lit: 1, maturity: 0.40,
+      blurb: 'Open-ended exploration over fixed paths.',
+      framing: "Adaptive systems are good at the next-best-step. They are bad at the wrong-on-purpose step the curious learner takes. **Curiosity & choice** asks how to leave room in a tutor for detours that look like inefficiency but feel like ownership.",
+      tensions: [
+        { label: 'Efficient path', text: 'Fixed sequences cover content reliably…' },
+        { label: 'Generative detour', text: '…and the detour is often where the learner becomes a learner.' },
+      ],
+      questions: [
+        'Can a tutor recognize a productive detour from a derailment, or must it trust the learner?',
+        'What does "choice" mean inside an adaptive sequence designed to converge?',
+      ],
+    },
+    { id: 's-teacher',     topicId: 't-teacher',title: 'Teacher in the Loop',       x: 1460, y: 1080,atomCount: 7,  contributors: 4, lit: 2, maturity: 0.58,
+      blurb: 'Where teachers approve, edit, override AI moves.',
+      framing: "Tutors don't work in vacuums; they work in classrooms with a teacher who knows the kid. **Teacher in the loop** is the design question of where, exactly, the teacher gets to say *not for this student* — and how the AI learns from that override without flattening the teacher's judgment into another data signal.",
+      tensions: [
+        { label: 'Speed', text: 'Auto-tutoring scales because teachers are not in the path…' },
+        { label: 'Context', text: '…but the teacher is the only one who knows the student\'s week.' },
+      ],
+      questions: [
+        'What\'s the lightest-weight way for a teacher to say "not this student, not now"?',
+        'Should teacher overrides train the model, train the policy, or stay strictly local?',
+      ],
+    },
+  ];
+
+  // Cross-topic weak edges (shown as dashed bridges in Level 2)
+  const bridges = [
+    { from: 's-meta', to: 's-selfreg', kind: 'weak' },
+    { from: 's-scaffold', to: 's-formative', kind: 'weak' },
+    { from: 's-equity', to: 's-multilingual', kind: 'weak' },
+    { from: 's-teacher', to: 's-rubric', kind: 'weak' },
+    { from: 's-dialogic', to: 's-curiosity', kind: 'weak' },
+  ];
+
+  // ===== Floating atoms (unclustered) =====
+  // `inTopic`: drifting near a topic but not in any subtopic yet
+  // `interTopic`: drifting in negative space between topics
+  const floaters = [
+    { id: 'f-1', kind: 'human', authorId: 'u-finn', text: "Should AI tutors disclose to the learner when they're guessing?",
+      topicId: 't-tutor', // floats near tutor, not in any subtopic
+      driftX: 0.8, driftY: 0.3, // 0..1 within topic bounds
+    },
+    { id: 'f-2', kind: 'human', authorId: 'u-noor', text: "Most tutoring research assumes a quiet room. What about a noisy one?",
+      topicId: 't-equity',
+      driftX: 0.25, driftY: 0.7,
+    },
+    { id: 'f-3', kind: 'human', authorId: 'u-jules', text: "The latency between answer and feedback might matter more than the feedback content.",
+      topicId: 't-assess',
+      driftX: 0.6, driftY: 0.2,
+    },
+    { id: 'f-4', kind: 'lit', authorId: 'lit', text: "Vygotsky on the zone of proximal development — what 'a more capable peer' meant before AI.",
+      cite: 'Vygotsky, 1978',
+      interTopic: true, x: 1080, y: 720,
+    },
+    { id: 'f-5', kind: 'human', authorId: 'u-mei', text: "What if the tutor's job is mostly to slow the learner down?",
+      interTopic: true, x: 980, y: 800,
+    },
+    { id: 'f-6', kind: 'human', authorId: 'u-sora', text: "Embodied gesture in tutoring — what gets lost in chat-only tutors?",
+      interTopic: true, x: 1100, y: 850,
+    },
+    // a near-cluster of 3 floaters in t-agency that the system flags as "ready to crystallize"
+    { id: 'f-7', kind: 'human', authorId: 'u-mei', text: "Self-paced learning and self-regulated learning aren't the same thing — UI tends to conflate them.",
+      topicId: 't-agency', clusterHint: 'paceVsRegulation',
+      driftX: 0.7, driftY: 0.7,
+    },
+    { id: 'f-8', kind: 'human', authorId: 'u-finn', text: "Pacing controls hand learners the steering wheel without teaching them to drive.",
+      topicId: 't-agency', clusterHint: 'paceVsRegulation',
+      driftX: 0.78, driftY: 0.85,
+    },
+    { id: 'f-9', kind: 'lit', authorId: 'lit', text: "Zimmerman: self-regulated learning involves goal-setting, monitoring, and self-evaluation.",
+      cite: 'Zimmerman, 2002',
+      topicId: 't-agency', clusterHint: 'paceVsRegulation',
+      driftX: 0.68, driftY: 0.78,
+    },
+  ];
+
+  // suggestion the system makes when floaters cluster
+  const clusterSuggestions = [
+    {
+      id: 'cs-1',
+      topicId: 't-agency',
+      proposedTitle: 'Pacing vs. Self-regulation',
+      reason: '3 floaters share a tension between learner pacing and learner self-regulation. They reference each other implicitly.',
+      atomIds: ['f-7','f-8','f-9'],
+    },
+  ];
+
+
+  // Layout coordinates in a ~1100 × 720 stage
+  const focalSubtopicId = 's-scaffold';
+
+  const atoms = [
+    // --- Cluster A: state-aware help (top-left) ---
+    {
+      id: 'a-1', kind: 'human', authorId: 'u-mei', subtopicId: 's-scaffold',
+      text: "Help should fade as the learner regains their footing — pull back when they don't need you.",
+      x: 270, y: 200, rot: -2.3, w: 240,
+    },
+    {
+      id: 'a-2', kind: 'human', authorId: 'u-ravi', subtopicId: 's-scaffold',
+      text: "Visualize support intensity so the learner sees how much they're leaning on the tutor.",
+      x: 480, y: 170, rot: 1.5, w: 250,
+    },
+    {
+      id: 'a-3', kind: 'lit', authorId: 'lit', subtopicId: 's-scaffold',
+      text: "Productive failure: delaying scaffolding can deepen conceptual learning.",
+      cite: 'Kapur, 2008 · Cognition & Instruction',
+      x: 340, y: 360, rot: 0, w: 230,
+    },
+    {
+      id: 'a-4', kind: 'ai', subtopicId: 's-scaffold',
+      text: 'Connecting these: scaffolding could be modulated by a "stuck signal" — a confidence drop that triggers help only when struggle stops being productive.',
+      x: 540, y: 360, rot: 0, w: 240, anchorIds: ['a-1','a-2','a-3'],
+    },
+
+    // --- Cluster B: granularity (right) ---
+    {
+      id: 'a-5', kind: 'human', authorId: 'u-sora', subtopicId: 's-scaffold',
+      text: "Don't scaffold whole problems — scaffold the smallest decision the learner is stuck at.",
+      x: 800, y: 220, rot: -1.6, w: 240,
+    },
+    {
+      id: 'a-6', kind: 'human', authorId: 'u-jules', subtopicId: 's-scaffold',
+      text: "Sub-step prompts beat full hints. Granularity > verbosity.",
+      x: 1010, y: 320, rot: 2.2, w: 220,
+    },
+    {
+      id: 'a-7', kind: 'lit', authorId: 'lit', subtopicId: 's-scaffold',
+      text: "Wood, Bruner & Ross — scaffolding works through contingent, faded, calibrated assistance.",
+      cite: 'Wood et al., 1976',
+      x: 920, y: 470, rot: 0, w: 240,
+    },
+
+    // --- Cluster C: teacher loop (bottom) ---
+    {
+      id: 'a-8', kind: 'human', authorId: 'u-noor', subtopicId: 's-scaffold',
+      text: "Teachers should be able to override the tutor's scaffolding policy per student.",
+      x: 410, y: 580, rot: 1.8, w: 250,
+    },
+    {
+      id: 'a-9', kind: 'human', authorId: 'u-finn', subtopicId: 's-scaffold',
+      text: "Without teacher signal, AI scaffolding flattens cultural and contextual difference.",
+      x: 660, y: 600, rot: -1.4, w: 250,
+    },
+
+    // --- Edge area / unclustered (right edge) ---
+    {
+      id: 'a-10', kind: 'human', authorId: 'u-finn', subtopicId: 's-scaffold',
+      text: "What if scaffolding itself is taught — learners learn to ask for the right help?",
+      x: 1130, y: 580, rot: 2.4, w: 240, edge: true,
+    },
+
+    // ===== Lighter atom counts on other subtopics so they're not empty when expanded =====
+    { id: 'a-m1', kind: 'human', authorId: 'u-jules', subtopicId: 's-meta',
+      text: "Naming a strategy can short-circuit the noticing it tries to provoke.",
+      x: 280, y: 220, rot: -1.4, w: 240 },
+    { id: 'a-m2', kind: 'human', authorId: 'u-noor', subtopicId: 's-meta',
+      text: "Try delaying the reflection prompt by 24 hours — does the noticing stick?",
+      x: 540, y: 200, rot: 1.6, w: 240 },
+    { id: 'a-m3', kind: 'lit', authorId: 'lit', subtopicId: 's-meta',
+      text: "Schraw & Dennison: the metacognitive awareness inventory.",
+      cite: 'Schraw & Dennison, 1994',
+      x: 410, y: 380, rot: 0, w: 230 },
+    { id: 'a-m4', kind: 'ai', subtopicId: 's-meta',
+      text: "These suggest a delay-then-prompt design — the system observes, the learner names.",
+      x: 700, y: 380, rot: 0, w: 240, anchorIds: ['a-m1','a-m2','a-m3'] },
+
+    { id: 'a-d1', kind: 'human', authorId: 'u-mei', subtopicId: 's-dialogic',
+      text: "Sitting with a wrong answer is the move; most tutors are too eager to repair.",
+      x: 280, y: 220, rot: -2.0, w: 240 },
+    { id: 'a-d2', kind: 'human', authorId: 'u-ravi', subtopicId: 's-dialogic',
+      text: "Define 'successful repair' before measuring it — otherwise we measure correctness.",
+      x: 560, y: 240, rot: 1.2, w: 240 },
+
+    { id: 'a-eq1', kind: 'human', authorId: 'u-noor', subtopicId: 's-equity',
+      text: "Effort signals are not effort — they're what the system rewards as effort.",
+      x: 280, y: 220, rot: -1.5, w: 240 },
+    { id: 'a-eq2', kind: 'lit', authorId: 'lit', subtopicId: 's-equity',
+      text: "Selbst et al.: the impossibility of context-free fairness.",
+      cite: 'Selbst et al., 2019',
+      x: 540, y: 240, rot: 0, w: 240 },
+    { id: 'a-eq3', kind: 'human', authorId: 'u-sora', subtopicId: 's-equity',
+      text: "An audit needs a counterfactual — show me the same struggle from a different demographic.",
+      x: 410, y: 400, rot: 1.4, w: 240 },
+
+    { id: 'a-ml1', kind: 'human', authorId: 'u-finn', subtopicId: 's-multilingual',
+      text: "Code-switching is a thinking move, not a comprehension gap.",
+      x: 280, y: 220, rot: -1.8, w: 240 },
+    { id: 'a-ml2', kind: 'human', authorId: 'u-mei', subtopicId: 's-multilingual',
+      text: "Heritage-language reasoning, target-language explanation — let the tutor hold both.",
+      x: 540, y: 240, rot: 1.5, w: 240 },
+
+    { id: 'a-fb1', kind: 'human', authorId: 'u-ravi', subtopicId: 's-formative',
+      text: "Instant feedback trains learners to wait for it. Add latency on purpose.",
+      x: 280, y: 220, rot: -1.2, w: 240 },
+    { id: 'a-fb2', kind: 'human', authorId: 'u-jules', subtopicId: 's-formative',
+      text: "What if formative feedback was deliberately less polished than summative?",
+      x: 540, y: 200, rot: 1.6, w: 240 },
+    { id: 'a-fb3', kind: 'lit', authorId: 'lit', subtopicId: 's-formative',
+      text: "Hattie & Timperley: where am I going / how am I going / where to next.",
+      cite: 'Hattie & Timperley, 2007',
+      x: 410, y: 380, rot: 0, w: 240 },
+
+    { id: 'a-r1', kind: 'human', authorId: 'u-noor', subtopicId: 's-rubric',
+      text: "Rubrics that AI can apply reliably are usually rubrics that flatten learning.",
+      x: 280, y: 220, rot: -1.4, w: 240 },
+    { id: 'a-r2', kind: 'human', authorId: 'u-sora', subtopicId: 's-rubric',
+      text: "Co-author the rubric with the learner mid-assignment — that's the lesson.",
+      x: 540, y: 240, rot: 1.3, w: 240 },
+
+    { id: 'a-sr1', kind: 'human', authorId: 'u-mei', subtopicId: 's-selfreg',
+      text: "If the tutor has to remind, self-regulation hasn't happened.",
+      x: 280, y: 220, rot: -1.6, w: 240 },
+    { id: 'a-sr2', kind: 'lit', authorId: 'lit', subtopicId: 's-selfreg',
+      text: "Zimmerman: forethought, performance, self-reflection.",
+      cite: 'Zimmerman, 2002',
+      x: 540, y: 240, rot: 0, w: 240 },
+
+    { id: 'a-c1', kind: 'human', authorId: 'u-finn', subtopicId: 's-curiosity',
+      text: "Detours are the curriculum the learner writes for themselves.",
+      x: 280, y: 220, rot: -1.4, w: 240 },
+    { id: 'a-c2', kind: 'human', authorId: 'u-jules', subtopicId: 's-curiosity',
+      text: "An adaptive system that converges can never tell apart curiosity from confusion.",
+      x: 540, y: 240, rot: 1.5, w: 240 },
+
+    { id: 'a-tl1', kind: 'human', authorId: 'u-ravi', subtopicId: 's-teacher',
+      text: "Teacher overrides should be local first, model-training last.",
+      x: 280, y: 220, rot: -1.4, w: 240 },
+    { id: 'a-tl2', kind: 'human', authorId: 'u-sora', subtopicId: 's-teacher',
+      text: "The teacher's veto is data, but it's not feature data — it's policy data.",
+      x: 540, y: 240, rot: 1.4, w: 240 },
+    { id: 'a-tl3', kind: 'human', authorId: 'u-noor', subtopicId: 's-teacher',
+      text: "What's the lightest gesture for 'not this kid, not now'? Two taps, max.",
+      x: 410, y: 400, rot: -1.2, w: 240 },
+  ];
+
+  // Reaction edges between atoms
+  const reactions = [
+    { from: 'a-2', to: 'a-1', kind: 'support', count: 4 },
+    { from: 'a-3', to: 'a-1', kind: 'cite',    count: 1 },
+    { from: 'a-9', to: 'a-8', kind: 'refine',  count: 2 },
+    { from: 'a-6', to: 'a-5', kind: 'support', count: 3 },
+    { from: 'a-7', to: 'a-5', kind: 'cite',    count: 1 },
+    { from: 'a-8', to: 'a-2', kind: 'challenge', count: 2 },
+    { from: 'a-10', to: 'a-1', kind: 'question', count: 1 },
+  ];
+
+  // AI Summary for s-scaffold
+  const summary = {
+    short: "This subtopic explores how AI tutors can calibrate help — when to give it, how granularly, and who decides.",
+    long: [
+      { text: "When help should appear is contested — some argue for early support, others for productive struggle.", refs: ['a-1','a-3'] },
+      { text: "Granularity matters: per-decision scaffolds outperform whole-problem hints.", refs: ['a-5','a-6','a-7'] },
+      { text: "Teacher override is repeatedly raised as a safeguard against cultural flattening.", refs: ['a-8','a-9'] },
+      { text: "An open question is whether learners can be taught to request help themselves.", refs: ['a-10'] },
+    ],
+    confidence: 0.78,
+  };
+
+  // Tension cards (system-detected complex relationships)
+  const insights = [
+    {
+      kind: 'tension',
+      title: 'Constructive tension',
+      text: '"Pull back help when learner regains footing" is challenged by "Teachers must be able to override per student." Both have multi-person Support.',
+      atomIds: ['a-1', 'a-8'],
+    },
+    {
+      kind: 'convergence',
+      title: 'Converging cluster',
+      text: 'Three atoms about granularity refine each other and may be ready to crystallize.',
+      atomIds: ['a-5','a-6','a-7'],
+    },
+    {
+      kind: 'isolated',
+      title: 'Isolated potential',
+      text: '"Learners learn to ask for the right help" is supported by people from 3 different fields — worth promoting.',
+      atomIds: ['a-10'],
+    },
+  ];
+
+  // Personal Dashboard data
+  const dashboard = {
+    you: 'u-you',
+    atoms: 7,
+    receivedSupport: 12,
+    receivedRefine: 4,
+    citations: 2,
+    nearNeighbors: ['u-ravi', 'u-mei'],
+    farNeighbors: ['u-finn', 'u-noor'],
+    suggestions: [
+      { topic: 'AI for Care', reason: 'Adjacent to your work on metacognition' },
+      { topic: 'AI for Civic Life', reason: 'Nobody from your background here yet' },
+    ],
+  };
+
+  // Proposal sample
+  const proposal = {
+    title: 'Adaptive Scaffolding via Stuck-Signal Detection',
+    sections: [
+      { heading: 'Motivation',
+        body: 'Tutoring systems often default to either over-helping or under-helping. Recent crowdsourced ideation suggests calibrating support to a real-time "stuck signal" that respects productive struggle.',
+        sources: { human: 0.62, lit: 0.22, ai: 0.16 } },
+      { heading: 'Approach',
+        body: 'We propose a per-decision scaffolding policy gated by a confidence-drop classifier, with teacher override at the student level. Granularity is constrained to the smallest decision the learner is stuck at.',
+        sources: { human: 0.71, lit: 0.18, ai: 0.11 } },
+      { heading: 'Evaluation',
+        body: 'Mixed-methods: classroom A/B with high-school algebra teachers; qualitative coding of help-seeking utterances; longitudinal tracking of self-regulation indices.',
+        sources: { human: 0.55, lit: 0.30, ai: 0.15 } },
+    ],
+  };
+
+  return {
+    users, domains, topics, subtopics, atoms, reactions, summary, insights,
+    bridges, focalSubtopicId, dashboard, proposal, floaters, clusterSuggestions,
+  };
+})();
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== components.jsx =====
+// ===== Shared atoms / atom rendering / reaction edges =====
+// Loaded BEFORE the screens. Exposes window globals.
+
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+
+// ---- Tiny SVG icons ----
+const Icon = ({ name, size = 14, stroke = 1.6, className = '' }) => {
+  const s = size;
+  const sw = stroke;
+  const props = { width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round', className };
+  switch (name) {
+    case 'search': return <svg {...props}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;
+    case 'bell': return <svg {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>;
+    case 'plus': return <svg {...props}><path d="M12 5v14M5 12h14"/></svg>;
+    case 'mic': return <svg {...props}><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>;
+    case 'send': return <svg {...props}><path d="m4 12 16-7-4 17-5-7-7-3Z"/></svg>;
+    case 'sparkle': return <svg {...props}><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><path d="m6 6 3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/></svg>;
+    case 'arrow-left': return <svg {...props}><path d="m15 6-6 6 6 6"/></svg>;
+    case 'arrow-right': return <svg {...props}><path d="m9 6 6 6-6 6"/></svg>;
+    case 'x': return <svg {...props}><path d="M6 6l12 12M18 6 6 18"/></svg>;
+    case 'check': return <svg {...props}><path d="m5 12 5 5L20 7"/></svg>;
+    case 'edit': return <svg {...props}><path d="M16 4l4 4-12 12H4v-4Z"/></svg>;
+    case 'merge': return <svg {...props}><path d="M8 4v6c0 4 8 4 8 8v2"/><path d="M16 4v6c0 4-8 4-8 8v2"/></svg>;
+    case 'split': return <svg {...props}><path d="M16 4v2c0 4-8 4-8 8v6"/><path d="M8 4v2c0 4 8 4 8 8v6"/></svg>;
+    case 'minus': return <svg {...props}><path d="M5 12h14"/></svg>;
+    case 'home': return <svg {...props}><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4Z"/></svg>;
+    case 'compass': return <svg {...props}><circle cx="12" cy="12" r="9"/><path d="m15 9-2 6-4 2 2-6Z"/></svg>;
+    case 'users': return <svg {...props}><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c.5-3 3-5 6-5s5.5 2 6 5"/><path d="M14 19c.4-2 1.7-3.5 3-3.5s2.6 1.5 3 3.5"/></svg>;
+    case 'doc': return <svg {...props}><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4"/></svg>;
+    case 'dashboard': return <svg {...props}><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>;
+    case 'expand': return <svg {...props}><path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6"/></svg>;
+    case 'collapse': return <svg {...props}><path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/></svg>;
+    case 'wand': return <svg {...props}><path d="m4 20 12-12 4 4-12 12Z"/><path d="M14 6 18 10"/><path d="M19 4v3M4 14h3M21 13h-2M5 5l1.5 1.5"/></svg>;
+    case 'filter': return <svg {...props}><path d="M3 5h18l-7 9v6l-4-2v-4Z"/></svg>;
+    default: return null;
+  }
+};
+
+window.Icon = Icon;
+
+// ---- Avatar ----
+function Avatar({ user, size = 28 }) {
+  if (!user) return null;
+  const initials = (user.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase();
+  return (
+    <span className="avatar" style={{
+      width: size, height: size,
+      background: user.bg,
+      color: 'var(--ink-2)',
+      boxShadow: `0 0 0 1.5px ${user.colorVar}`,
+      fontSize: size * 0.4,
+    }}>{initials}</span>
+  );
+}
+window.Avatar = Avatar;
+
+// ---- Atom — Human ----
+function HumanAtom({ atom, user, selected, onClick, onContext, dimmed }) {
+  return (
+    <div
+      className={`atom ${selected ? 'selected' : ''} ${dimmed ? 'dim' : ''}`}
+      style={{
+        left: atom.x, top: atom.y,
+        transform: `translate(-50%, -50%) rotate(${atom.rot || 0}deg)`,
+        width: atom.w || 220,
+        opacity: dimmed ? 0.25 : 1,
+        zIndex: selected ? 10 : 2,
+      }}
+      onClick={(e) => { e.stopPropagation(); onClick && onClick(atom); }}
+      onContextMenu={(e) => { e.preventDefault(); onContext && onContext(atom, e); }}
+    >
+      <div className="atom-human" style={{ background: user.bg, ['--r']: `${atom.rot || 0}deg` }}>
+        <div>{atom.text}</div>
+        <div className="meta">
+          <span className="dot" style={{ color: user.colorVar }}></span>
+          <span>{user.name}</span>
+          <span style={{ marginLeft: 'auto' }} className="mono tiny">{atom.time || '2d'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+window.HumanAtom = HumanAtom;
+
+// ---- Atom — Literature ----
+function LitAtom({ atom, selected, onClick, onContext, dimmed }) {
+  return (
+    <div
+      className={`atom ${selected ? 'selected' : ''}`}
+      style={{
+        left: atom.x, top: atom.y,
+        transform: `translate(-50%, -50%) rotate(${atom.rot || 0}deg)`,
+        width: atom.w || 230,
+        opacity: dimmed ? 0.25 : 1,
+        zIndex: selected ? 10 : 2,
+      }}
+      onClick={(e) => { e.stopPropagation(); onClick && onClick(atom); }}
+      onContextMenu={(e) => { e.preventDefault(); onContext && onContext(atom, e); }}
+    >
+      <div className="atom-lit">
+        <div className="lit-meta">
+          <span className="lit-icon" />
+          <span>Literature</span>
+        </div>
+        <div className="lit-body">
+          {atom.text}
+          <div className="lit-cite">{atom.cite}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+window.LitAtom = LitAtom;
+
+// ---- Atom — AI ----
+function AiAtom({ atom, selected, onClick, onContext, dimmed, hideAi }) {
+  if (hideAi) return null;
+  return (
+    <div
+      className={`atom ${selected ? 'selected' : ''}`}
+      style={{
+        left: atom.x, top: atom.y,
+        transform: `translate(-50%, -50%) rotate(${atom.rot || 0}deg)`,
+        width: atom.w || 230,
+        opacity: dimmed ? 0.25 : 1,
+        zIndex: selected ? 10 : 1,
+      }}
+      onClick={(e) => { e.stopPropagation(); onClick && onClick(atom); }}
+      onContextMenu={(e) => { e.preventDefault(); onContext && onContext(atom, e); }}
+    >
+      <div className="atom-ai">
+        <div className="ai-tag"><span className="ai-orb" />AI · connection</div>
+        <div>{atom.text}</div>
+      </div>
+    </div>
+  );
+}
+window.AiAtom = AiAtom;
+
+// ---- Generic atom dispatch ----
+function AtomNode({ atom, users, selected, highlighted, onClick, onContext, hideAi, hideHuman, hideLit, colorByUser }) {
+  if (atom.kind === 'human' && hideHuman) return null;
+  if (atom.kind === 'lit' && hideLit) return null;
+  if (atom.kind === 'ai' && hideAi) return null;
+  const user = users.find(u => u.id === atom.authorId) || users[0];
+  const dimmed = atom.edge && false; // edges are styled separately
+  const cls = highlighted ? 'highlight' : '';
+
+  if (atom.kind === 'human') {
+    const u = colorByUser ? user : { ...user, bg: 'var(--paper)', colorVar: 'var(--ink-4)' };
+    return <div className={cls}><HumanAtom atom={atom} user={u} selected={selected} onClick={onClick} onContext={onContext} /></div>;
+  }
+  if (atom.kind === 'lit') return <div className={cls}><LitAtom atom={atom} selected={selected} onClick={onClick} onContext={onContext} /></div>;
+  if (atom.kind === 'ai') return <div className={cls}><AiAtom atom={atom} selected={selected} onClick={onClick} onContext={onContext} /></div>;
+  return null;
+}
+window.AtomNode = AtomNode;
+
+// ---- Reaction edge SVG renderer ----
+// edges between atoms by id, drawn as SVG paths; atom positions come in by id.
+function ReactionEdges({ atoms, reactions, hideKinds = {}, width, height }) {
+  const byId = useMemo(() => Object.fromEntries(atoms.map(a => [a.id, a])), [atoms]);
+  const paths = reactions.filter(r => !hideKinds[r.kind] && byId[r.from] && byId[r.to]).map(r => {
+    const a = byId[r.from];
+    const b = byId[r.to];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const mx = (a.x + b.x) / 2 + (-dy * 0.1);
+    const my = (a.y + b.y) / 2 + (dx * 0.1);
+    let d;
+    if (r.kind === 'challenge') {
+      // zigzag between the two
+      const steps = 7;
+      const pts = [];
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const px = a.x + dx * t;
+        const py = a.y + dy * t;
+        const off = (i % 2 === 0 ? -1 : 1) * 4;
+        pts.push([px + (-dy / Math.hypot(dx,dy)) * off, py + (dx / Math.hypot(dx,dy)) * off]);
+      }
+      d = pts.map((p, i) => (i === 0 ? `M ${p[0]} ${p[1]}` : `L ${p[0]} ${p[1]}`)).join(' ');
+    } else {
+      d = `M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`;
+    }
+    return { d, kind: r.kind, id: `${r.from}-${r.to}` };
+  });
+  return (
+    <svg style={{ position: 'absolute', inset: 0, width: width || '100%', height: height || '100%', pointerEvents: 'none', zIndex: 1 }}>
+      <defs>
+        <marker id="arrow-refine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--refine)" />
+        </marker>
+      </defs>
+      {paths.map(p => (
+        <path
+          key={p.id}
+          d={p.d}
+          className={`edge-${p.kind}`}
+          markerEnd={p.kind === 'refine' ? 'url(#arrow-refine)' : undefined}
+        />
+      ))}
+    </svg>
+  );
+}
+window.ReactionEdges = ReactionEdges;
+
+// ---- Maturity meter ----
+function Maturity({ value }) {
+  const cells = 5;
+  const filled = Math.round(value * cells);
+  return (
+    <span className="maturity" title={`Maturity ${Math.round(value*100)}%`}>
+      {Array.from({length: cells}).map((_, i) => (
+        <span key={i} className={`ring ${i < filled ? 'full' : ''}`} />
+      ))}
+      <span className="mono tiny muted" style={{ marginLeft: 6 }}>{Math.round(value*100)}%</span>
+    </span>
+  );
+}
+window.Maturity = Maturity;
+
+// ---- Helper: dot for user color ----
+function ColorDot({ user, size = 10 }) {
+  return <span style={{ display: 'inline-block', width: size, height: size, borderRadius: '50%', background: user.colorVar, border: '1px solid rgba(0,0,0,0.05)' }} />;
+}
+window.ColorDot = ColorDot;
+
+// ---- Reaction context menu ----
+function ReactionMenu({ atom, position, onPick, onClose }) {
+  if (!atom || !position) return null;
+  const items = [
+    { key: 'support',   label: 'Support',   color: 'var(--support)' },
+    { key: 'challenge', label: 'Challenge', color: 'var(--challenge)' },
+    { key: 'refine',    label: 'Refine',    color: 'var(--refine)' },
+    { key: 'question',  label: 'Question',  color: 'var(--question)' },
+    { key: 'cite',      label: 'Cite source', color: 'var(--cite)' },
+  ];
+  useEffect(() => {
+    const h = () => onClose && onClose();
+    window.addEventListener('click', h);
+    return () => window.removeEventListener('click', h);
+  }, [onClose]);
+  return (
+    <div
+      className="card"
+      style={{ position: 'fixed', left: position.x, top: position.y, zIndex: 200, padding: 6, minWidth: 180, boxShadow: 'var(--sh-3)' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="tiny muted" style={{ padding: '6px 10px 4px' }}>React to this atom</div>
+      {items.map(it => (
+        <button
+          key={it.key}
+          className="row gap-2"
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, justifyContent: 'flex-start' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tint)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          onClick={() => { onPick && onPick(it.key, atom); onClose && onClose(); }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: it.color }} />
+          <span style={{ fontSize: 13 }}>{it.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+window.ReactionMenu = ReactionMenu;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== chrome.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+// ===== Top nav, onboarding, modal pieces =====
+
+// ---- TopNav ----
+function TopNav({ level, breadcrumbs, onCrumbClick, onOpenDashboard, onOpenCollab, you, notify }) {
+  return (
+    <div className="topnav">
+      <div className="topnav-brand">
+        <span className="brand-mark" />
+        <span>Atomic</span>
+        <span className="muted" style={{ fontFamily: 'var(--f-hand)', fontSize: 22, color: 'var(--ink-3)' }}>ideation</span>
+      </div>
+      <div className="crumbs">
+        {breadcrumbs.map((c, i) => (
+          <div key={c.id || i}>
+            {i > 0 && <span className="crumb-sep">·</span>}
+            <span
+              className={`crumb ${i === breadcrumbs.length - 1 ? 'active' : ''}`}
+              onClick={() => onCrumbClick && onCrumbClick(c, i)}
+            >{c.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="topnav-right">
+        <div className="topnav-search">
+          <Icon name="search" size={13} />
+          <span>Search atoms, subtopics…</span>
+          <kbd>⌘K</kbd>
+        </div>
+        <button className="icon-btn" title="Find collaborators" onClick={onOpenCollab}>
+          <Icon name="users" size={16} />
+        </button>
+        <button className="icon-btn" title="Notifications">
+          <Icon name="bell" size={16} />
+          {notify && <span className="badge" />}
+        </button>
+        <button className="icon-btn" title="Your dashboard" onClick={onOpenDashboard}>
+          <Icon name="dashboard" size={16} />
+        </button>
+        <Avatar user={you} size={28} />
+      </div>
+    </div>
+  );
+}
+window.TopNav = TopNav;
+
+// ---- Onboarding flow (multi-step) ----
+function Onboarding({ open, onClose }) {
+  const [step, setStep] = useState(0);
+  const [tags, setTags] = useState(['HCI']);
+  if (!open) return null;
+  const steps = [
+    {
+      title: 'Welcome to Atomic',
+      body: (
+        <div>
+          <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)', margin: '8px 0 18px' }}>
+            A workshop space where ideas get broken into <em>atoms</em>, cluster into research subtopics, and grow with literature and AI assistance — without losing whose voice is whose.
+          </p>
+          <div className="row gap-3" style={{ flexWrap: 'wrap' }}>
+            <Sample type="human" />
+            <Sample type="lit" />
+            <Sample type="ai" />
+          </div>
+          <p className="tiny muted" style={{ marginTop: 14 }}>
+            Three atom types stay visually distinct so contributions never get flattened.
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: 'Pick your background',
+      body: (
+        <div>
+          <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--ink-3)', margin: '8px 0 14px' }}>
+            We use this to suggest where you might add unique perspective — and who in the community is across a research aisle from you.
+          </p>
+          <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+            {['HCI','Design','ML/Engineering','Cognitive Science','Education','Sociology','Anthropology','Public Policy','Linguistics','Art & Media'].map(t => {
+              const on = tags.includes(t);
+              return (
+                <button key={t}
+                  className="chip"
+                  style={{ background: on ? 'var(--ink)' : 'var(--bg-elev)', color: on ? 'var(--bg)' : 'var(--ink-2)', cursor: 'pointer', borderColor: on ? 'var(--ink)' : 'var(--line)' }}
+                  onClick={() => setTags(on ? tags.filter(x=>x!==t) : [...tags, t])}
+                >{t}</button>
+              );
+            })}
+          </div>
+          <p className="tiny muted" style={{ marginTop: 14 }}>You can change this later from your profile.</p>
+        </div>
+      ),
+    },
+    {
+      title: 'How contributions become atoms',
+      body: (
+        <div>
+          <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-2)', margin: '8px 0 16px' }}>
+            When you type or speak, the system proposes a split into the smallest claims. <strong>You always confirm.</strong> Accept, edit, merge, re-route, or reject.
+          </p>
+          <div style={{ background: 'var(--bg-tint)', borderRadius: 12, padding: 14, border: '1px dashed var(--line)' }}>
+            <p style={{ margin: 0, fontFamily: 'var(--f-hand)', fontSize: 18, lineHeight: 1.3 }}>
+              "AI tutoring should consider metacognition — especially in scaffolding complex problems…"
+            </p>
+            <div className="row gap-2" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+              <span className="chip"><span className="swatch" style={{ background: 'var(--u-amber)' }}/>metacognition</span>
+              <span className="chip"><span className="swatch" style={{ background: 'var(--u-amber)' }}/>scaffolding granularity</span>
+              <span className="chip"><span className="swatch" style={{ background: 'var(--u-amber)' }}/>complex problem decomposition</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Reactions, not deletions',
+      body: (
+        <div>
+          <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-2)', margin: '8px 0 16px' }}>
+            Atoms are never erased. They get connected: <strong>Support, Challenge, Refine, Question, Cite.</strong> Disagreement becomes structure, not noise.
+          </p>
+          <div className="row gap-3" style={{ flexWrap: 'wrap' }}>
+            {[
+              { k: 'support', label: 'Support', d: 'M0 8 H40' },
+              { k: 'challenge', label: 'Challenge', d: 'M0 8 L4 4 L8 12 L12 4 L16 12 L20 4 L24 12 L28 4 L32 12 L36 4 L40 8' },
+              { k: 'refine', label: 'Refine', d: 'M0 8 H36' },
+              { k: 'question', label: 'Question', d: 'M0 8 H40' },
+              { k: 'cite', label: 'Cite', d: 'M0 8 H40' },
+            ].map(it => (
+              <div key={it.k} className="row gap-2 tiny">
+                <svg width="40" height="16" viewBox="0 0 40 16">
+                  <path d={it.d} className={`edge-${it.k}`} markerEnd={it.k === 'refine' ? 'url(#arr)' : undefined}/>
+                  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--refine)" /></marker></defs>
+                </svg>
+                <span className="muted">{it.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+  ];
+  const cur = steps[step];
+  return (
+    <div className="onboard-back">
+      <div className="onboard-card">
+        <div className="row" style={{ marginBottom: 14 }}>
+          <span className="mono tiny muted">{String(step+1).padStart(2,'0')} / {String(steps.length).padStart(2,'0')}</span>
+          <button className="icon-btn" style={{ marginLeft: 'auto' }} onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+        <h2 className="serif" style={{ margin: '0 0 4px', fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em' }}>{cur.title}</h2>
+        <div>{cur.body}</div>
+        <div className="row" style={{ marginTop: 24 }}>
+          <div className="row gap-2">
+            {steps.map((_, i) => (
+              <span key={i} style={{ width: 22, height: 3, borderRadius: 2, background: i <= step ? 'var(--ink)' : 'var(--line)' }} />
+            ))}
+          </div>
+          <div className="row gap-2" style={{ marginLeft: 'auto' }}>
+            {step > 0 && <button className="btn btn-ghost" onClick={() => setStep(s=>s-1)}>Back</button>}
+            {step < steps.length - 1
+              ? <button className="btn btn-primary" onClick={() => setStep(s=>s+1)}>Next <Icon name="arrow-right" size={13} /></button>
+              : <button className="btn btn-primary" onClick={onClose}>Enter the lobby <Icon name="arrow-right" size={13} /></button>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sample({ type }) {
+  if (type === 'human') return (
+    <div style={{ width: 160 }}>
+      <div className="atom-human" style={{ position: 'relative', background: 'oklch(95% 0.07 75)', transform: 'rotate(-1.5deg)' }}>
+        Worth noticing what learners do when they're stuck before stepping in.
+        <div className="meta"><span className="dot" style={{ color: 'var(--u-amber)' }}/>Ravi · 2d</div>
+      </div>
+      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 16 }}>Human · sticky</div>
+    </div>
+  );
+  if (type === 'lit') return (
+    <div style={{ width: 180 }}>
+      <div className="atom-lit" style={{ position: 'relative' }}>
+        <div className="lit-meta"><span className="lit-icon"/>Literature</div>
+        <div className="lit-body">Productive failure deepens conceptual learning.<div className="lit-cite">Kapur, 2008</div></div>
+      </div>
+      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Literature · flat</div>
+    </div>
+  );
+  if (type === 'ai') return (
+    <div style={{ width: 200 }}>
+      <div className="atom-ai" style={{ position: 'relative' }}>
+        <div className="ai-tag"><span className="ai-orb"/>AI · connection</div>
+        Connecting these into a "stuck signal" — help only after struggle stops being productive.
+      </div>
+      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>AI · dashed ghost</div>
+    </div>
+  );
+}
+
+window.Onboarding = Onboarding;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== screen-lobby.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+// ===== Screen A — Domain Lobby (Level 1) =====
+
+function DomainLobby({ domains, you, onPickDomain }) {
+  const recommended = domains.filter(d => d.kind === 'recommended');
+  const community = domains.filter(d => d.kind === 'community');
+
+  return (
+    <div className="paper-bg" style={{ position: 'absolute', inset: 0, paddingTop: 56, overflow: 'auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 48px 80px' }}>
+
+        <div className="row" style={{ alignItems: 'flex-end', marginBottom: 48 }}>
+          <div>
+            <div className="mono tiny muted" style={{ letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Domain Lobby</div>
+            <h1 className="serif" style={{ margin: 0, fontSize: 56, lineHeight: 1.05, fontWeight: 400, letterSpacing: '-0.025em' }}>
+              Where would you like to <em style={{ fontFamily: 'var(--f-hand)', fontStyle: 'normal', fontWeight: 400 }}>think today</em>?
+            </h1>
+            <p className="muted" style={{ marginTop: 12, fontSize: 15, maxWidth: 600 }}>
+              Pick a research domain to enter — your atoms join the conversation already in progress.
+            </p>
+          </div>
+          <div style={{ marginLeft: 'auto' }}>
+            <button className="btn"><Icon name="plus" size={14}/> Create new domain</button>
+          </div>
+        </div>
+
+        <SectionHead label="Recommended for you" sub={`Based on your background and recent atoms`} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 56 }}>
+          {recommended.map((d, i) => <DomainCard key={d.id} d={d} you={you} highlight={i === 0} onPick={onPickDomain} />)}
+        </div>
+
+        <SectionHead label="The community is waiting on you" sub="Your background is underrepresented here" tone="amber" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 56 }}>
+          {community.map(d => <DomainCard key={d.id} d={d} you={you} stretch onPick={onPickDomain} />)}
+        </div>
+
+        <div className="card" style={{ padding: 22, display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div className="serif" style={{ fontSize: 19 }}>Adjust the recommendation balance</div>
+            <div className="tiny muted">Lean into what you know, or stretch into new fields. You can change this anytime.</div>
+          </div>
+          <BalanceSlider />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionHead({ label, sub, tone }) {
+  return (
+    <div className="row" style={{ marginBottom: 18, gap: 12 }}>
+      <div className="serif italic" style={{ fontSize: 22, color: tone === 'amber' ? 'var(--amber-ink)' : 'var(--ink-2)' }}>
+        {label}
+      </div>
+      <span className="tiny muted">{sub}</span>
+      <div style={{ flex: 1, height: 1, background: 'var(--line)', marginLeft: 6 }} />
+    </div>
+  );
+}
+
+function DomainCard({ d, you, highlight, stretch, onPick }) {
+  const matchPct = Math.round(d.yourColorMatch * 100);
+  return (
+    <div
+      className="card"
+      style={{
+        padding: 22,
+        cursor: 'pointer',
+        position: 'relative',
+        transition: 'transform 160ms, box-shadow 160ms',
+        background: highlight ? 'linear-gradient(180deg, var(--amber-soft), var(--bg-elev))' : 'var(--bg-elev)',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--sh-3)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--sh-1)'; }}
+      onClick={() => onPick && onPick(d)}
+    >
+      {/* color signature */}
+      <div className="row gap-2" style={{ marginBottom: 14 }}>
+        {['rose','amber','citron','mint','sky','iris'].slice(0, 3 + Math.floor(d.contributors/30)).map(c => (
+          <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: `var(--u-${c})`, border: '1px solid rgba(0,0,0,.06)' }} />
+        ))}
+        <span className="tiny muted" style={{ marginLeft: 'auto', fontFamily: 'var(--f-mono)' }}>{d.recent}</span>
+      </div>
+
+      <h3 className="serif" style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 500, letterSpacing: '-0.01em' }}>{d.title}</h3>
+      <p className="muted" style={{ margin: '0 0 18px', fontSize: 13, lineHeight: 1.45 }}>{d.blurb}</p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+        <Stat label="Subtopics" value={d.subtopics} />
+        <Stat label="Contributors" value={d.contributors} />
+      </div>
+
+      {/* Color match bar */}
+      <div style={{ marginBottom: 14 }}>
+        <div className="row" style={{ marginBottom: 4 }}>
+          <span className="tiny muted">{stretch ? 'Color distance from community' : 'Your background fit'}</span>
+          <span className="mono tiny" style={{ marginLeft: 'auto' }}>{matchPct}%</span>
+        </div>
+        <div className="progress"><span style={{ width: `${matchPct}%`, background: stretch ? 'var(--challenge)' : 'var(--amber)' }}/></div>
+      </div>
+
+      <div className="row" style={{ gap: 8 }}>
+        {d.maturityCount > 0 && (
+          <span className="chip" style={{ background: 'var(--amber-soft)', borderColor: 'transparent', color: 'var(--amber-ink)' }}>
+            <Icon name="sparkle" size={10}/> {d.maturityCount} near proposal
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto' }} className="row gap-2">
+          <span className="tiny muted">Enter</span>
+          <Icon name="arrow-right" size={13} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div>
+      <div className="serif" style={{ fontSize: 22, lineHeight: 1, fontWeight: 500 }}>{value}</div>
+      <div className="tiny muted">{label}</div>
+    </div>
+  );
+}
+
+function BalanceSlider() {
+  const [v, setV] = useState(0.5);
+  return (
+    <div style={{ width: 280 }}>
+      <input type="range" min="0" max="1" step="0.01" value={v} onChange={e => setV(parseFloat(e.target.value))} style={{ width: '100%', accentColor: 'var(--ink)' }} />
+      <div className="row tiny muted">
+        <span>Deepen</span>
+        <span style={{ marginLeft: 'auto' }}>Stretch</span>
+      </div>
+    </div>
+  );
+}
+
+window.DomainLobby = DomainLobby;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== screen-domain.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+// ===== Domain Canvas — unified Topic + Subtopic experience (Levels 2 & 3 merged) =====
+// One pan/zoom workspace. Topic regions hold subtopic accordion cards.
+// Click a subtopic → it expands inline, revealing rich body + AtomNode visualization.
+// Floater atoms drift in negative space within a topic, and between topics.
+// Right-edge collapsible AI Summary rail. Bottom dock for input.
+
+function DomainCanvas({
+  domain, topics, subtopics, atoms, reactions, users, summary, insights, bridges,
+  floaters, clusterSuggestions,
+  filters, onFilterChange,
+  onOpenAtomization, onOpenProposal, onOpenInsight,
+}) {
+  const hostRef = useRef(null);
+  const [view, setView] = useState({ x: 0, y: 60, k: 0.62 });
+  const [drag, setDrag] = useState(null);
+  const [expanded, setExpanded] = useState(null); // subtopic id
+  const [highlight, setHighlight] = useState(null); // atom id
+  const [aiRailOpen, setAiRailOpen] = useState(true);
+  const [reactionsState, setReactions] = useState(reactions);
+  const [atomsState, setAtomsState] = useState(atoms);
+  const [floatersState, setFloatersState] = useState(floaters || []);
+  const [crystallized, setCrystallized] = useState({}); // suggestionId -> true once user accepts
+  const [pulse, setPulse] = useState([]); // freshly added atom ids that should pulse
+
+  // dragging an atom (only when expanded)
+  const [atomDrag, setAtomDrag] = useState(null);
+
+  const subById = useMemo(() => Object.fromEntries(subtopics.map(s => [s.id, s])), [subtopics]);
+  const topicById = useMemo(() => Object.fromEntries(topics.map(t => [t.id, t])), [topics]);
+
+  // pan
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.subtopic-card') || e.target.closest('.canvas-control') || e.target.closest('.atom-host')) return;
+    setDrag({ sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y });
+  };
+  const onMouseMove = (e) => {
+    if (atomDrag) {
+      const dx = (e.clientX - atomDrag.sx) / view.k;
+      const dy = (e.clientY - atomDrag.sy) / view.k;
+      setAtomsState(prev => prev.map(a => a.id === atomDrag.id ? { ...a, x: atomDrag.ox + dx, y: atomDrag.oy + dy } : a));
+      return;
+    }
+    if (!drag) return;
+    setView(v => ({ ...v, x: drag.vx + (e.clientX - drag.sx), y: drag.vy + (e.clientY - drag.sy) }));
+  };
+  const onMouseUp = () => { setDrag(null); setAtomDrag(null); };
+
+  const onWheel = (e) => {
+    e.preventDefault();
+    const host = hostRef.current.getBoundingClientRect();
+    const mx = e.clientX - host.left;
+    const my = e.clientY - host.top;
+    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    setView(v => {
+      const nk = Math.max(0.25, Math.min(1.4, v.k * factor));
+      const nx = mx - (mx - v.x) * (nk / v.k);
+      const ny = my - (my - v.y) * (nk / v.k);
+      return { x: nx, y: ny, k: nk };
+    });
+  };
+
+  const zoomBtn = (delta) => {
+    const host = hostRef.current.getBoundingClientRect();
+    const mx = host.width / 2, my = host.height / 2;
+    setView(v => {
+      const nk = Math.max(0.25, Math.min(1.4, v.k + delta));
+      const nx = mx - (mx - v.x) * (nk / v.k);
+      const ny = my - (my - v.y) * (nk / v.k);
+      return { x: nx, y: ny, k: nk };
+    });
+  };
+
+  const fitToScreen = () => setView({ x: 0, y: 60, k: 0.62 });
+
+  // expanding a subtopic → fly camera to it
+  const expandSubtopic = (s) => {
+    setExpanded(s.id);
+    if (!hostRef.current) return;
+    const hostRect = hostRef.current.getBoundingClientRect();
+
+    // Compute the expanded card's center in CANVAS COORDS using the same math
+    // SubtopicCard uses for X/Y when expanded:
+    //   X_expanded = layout.x - (EXP_W - layout.w) / 2
+    //   Y_expanded = layout.y - 40
+    //   center = (X + EXP_W/2, Y + EXP_H/2) = (layout.x + layout.w/2, layout.y - 40 + EXP_H/2)
+    const lay = subtopicLayouts[s.id];
+    if (!lay) return;
+    const cardCenterX = lay.x + lay.w / 2;
+    const cardCenterY = lay.y - 40 + EXP_H / 2;
+
+    // Choose a zoom level that makes the expanded card fit comfortably inside the host
+    // (both horizontally and vertically), with 40px margin.
+    const fitK = Math.min(
+      (hostRect.width  - 40) / EXP_W,
+      (hostRect.height - 40) / EXP_H,
+      1.0
+    );
+    const targetK = Math.max(0.45, fitK);
+
+    // Translate so the card center lands at the host center.
+    setView({
+      k: targetK,
+      x: hostRect.width  / 2 - cardCenterX * targetK,
+      y: hostRect.height / 2 - cardCenterY * targetK,
+    });
+  };
+
+  const collapseSubtopic = () => setExpanded(null);
+
+  const visibleAtomsFor = (sid) => atomsState.filter(a => a.subtopicId === sid).filter(a => {
+    if (filters.hideHuman && a.kind === 'human') return false;
+    if (filters.hideLit && a.kind === 'lit') return false;
+    if (filters.hideAi && a.kind === 'ai') return false;
+    return true;
+  });
+
+  const onAtomMouseDown = (e, a) => {
+    e.stopPropagation();
+    setAtomDrag({ id: a.id, sx: e.clientX, sy: e.clientY, ox: a.x, oy: a.y });
+  };
+
+  // Adding an atom to a subtopic (called from atomize confirm — wired through prop)
+  const addAtomToSubtopic = useCallback((sid, atomData) => {
+    const id = 'a-new-' + Date.now();
+    const sub = subById[sid];
+    if (!sub) return;
+    // find a non-overlapping position inside the subtopic card
+    const existing = atomsState.filter(a => a.subtopicId === sid);
+    const x = 280 + (existing.length % 3) * 250 + Math.random() * 30;
+    const y = 220 + Math.floor(existing.length / 3) * 200 + Math.random() * 20;
+    const newAtom = {
+      id, kind: atomData.kind || 'human', authorId: atomData.authorId || 'u-you',
+      text: atomData.text, subtopicId: sid,
+      x, y, rot: (Math.random() - 0.5) * 4, w: 240,
+    };
+    setAtomsState(prev => [...prev, newAtom]);
+    setPulse(p => [...p, id]);
+    setTimeout(() => setPulse(p => p.filter(x => x !== id)), 2000);
+  }, [atomsState, subById]);
+
+  window.__addAtomToSubtopic = addAtomToSubtopic; // expose for atomize modal
+
+  const addReaction = useCallback((kind, atom) => {
+    setReactions(rs => [...rs, { from: 'a-new-' + Date.now(), to: atom.id, kind, count: 1, fresh: true }]);
+  }, []);
+
+  const acceptCluster = (cs) => {
+    setCrystallized(c => ({ ...c, [cs.id]: true }));
+    // promote floaters to a new subtopic visually — for demo, just hide them and show a new "card"
+  };
+
+  // Compute layout for each topic's subtopic cards
+  // We arrange cards inside the topic rectangle in a grid.
+  const subtopicLayouts = useMemo(() => {
+    const layouts = {};
+    topics.forEach(t => {
+      const subs = t.subtopicIds.map(id => subById[id]).filter(Boolean);
+      const cardW = 260, cardH = 200;
+      const gap = 28;
+      const padTop = 80, padX = 28;
+      subs.forEach((s, i) => {
+        layouts[s.id] = {
+          x: t.x + padX + (i % 2) * (cardW + gap),
+          y: t.y + padTop + Math.floor(i / 2) * (cardH + gap),
+          w: cardW, h: cardH,
+        };
+      });
+    });
+    return layouts;
+  }, [topics, subById]);
+
+  // Position floaters within topics
+  const floaterLayouts = useMemo(() => {
+    const layouts = {};
+    floatersState.forEach(f => {
+      if (f.interTopic) {
+        layouts[f.id] = { x: f.x, y: f.y };
+      } else if (f.topicId) {
+        const t = topicById[f.topicId];
+        if (!t) return;
+        // place in topic but avoid subtopic card area
+        layouts[f.id] = {
+          x: t.x + 30 + f.driftX * (t.w - 280),
+          y: t.y + 40 + f.driftY * (t.h - 100),
+        };
+      }
+    });
+    return layouts;
+  }, [floatersState, topicById]);
+
+  // Bridges between subtopics
+  const bridgeCenters = useMemo(() => {
+    return bridges.map(b => {
+      const la = subtopicLayouts[b.from];
+      const lb = subtopicLayouts[b.to];
+      if (!la || !lb) return null;
+      return {
+        ...b,
+        ax: la.x + la.w / 2,
+        ay: la.y + la.h / 2,
+        bx: lb.x + lb.w / 2,
+        by: lb.y + lb.h / 2,
+      };
+    }).filter(Boolean);
+  }, [bridges, subtopicLayouts]);
+
+  // expanded card dimensions
+  const EXP_W = 1150, EXP_H = 760;
+
+  return (
+    <div className="paper-bg" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      {/* Domain header bar */}
+      <div style={{
+        position: 'absolute', top: 56, left: 0, right: 0, height: 56,
+        display: 'flex', alignItems: 'center', padding: '0 24px', gap: 18,
+        zIndex: 30, background: 'rgba(250,248,244,0.92)',
+        backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)',
+      }}>
+        <div>
+          <div className="mono tiny muted" style={{ letterSpacing: '0.16em', textTransform: 'uppercase' }}>Domain</div>
+          <div className="serif" style={{ fontSize: 19, fontWeight: 500, lineHeight: 1.1, letterSpacing: '-0.01em' }}>{domain.title}</div>
+        </div>
+        <div className="row gap-3 tiny muted" style={{ marginLeft: 14 }}>
+          <span>{topics.length} topics</span><span>·</span>
+          <span>{subtopics.length} subtopics</span><span>·</span>
+          <span>{atomsState.length + floatersState.length} atoms</span>
+        </div>
+        <div style={{ marginLeft: 'auto' }} className="row gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={fitToScreen}><Icon name="compass" size={12}/> Fit</button>
+          <button className="btn btn-ghost btn-sm"><Icon name="filter" size={12}/> Filter</button>
+        </div>
+      </div>
+
+      {/* Pan/zoom canvas */}
+      <div
+        ref={hostRef}
+        className={`canvas-host ${drag ? 'grabbing' : ''} ${atomDrag ? 'grabbing' : ''}`}
+        style={{ top: 112, right: aiRailOpen ? 340 : 48, transition: 'right 220ms' }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
+      >
+        <div className="canvas-stage" style={{
+          transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
+          width: 3200, height: 1600,
+        }}>
+          {/* Bridge lines between subtopics */}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+            {bridgeCenters.map((b, i) => {
+              const mx = (b.ax + b.bx) / 2;
+              const my = (b.ay + b.by) / 2 - 40;
+              return (
+                <path
+                  key={i}
+                  d={`M ${b.ax} ${b.ay} Q ${mx} ${my} ${b.bx} ${b.by}`}
+                  className="edge-weak"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Topic regions */}
+          {topics.map(t => (
+            <TopicRegion key={t.id} t={t} dimmed={!!expanded} />
+          ))}
+
+          {/* Subtopic accordion cards */}
+          {subtopics.map(s => {
+            const lay = subtopicLayouts[s.id];
+            if (!lay) return null;
+            const isExpanded = expanded === s.id;
+            const isOtherExpanded = expanded && !isExpanded;
+            return (
+              <SubtopicCard
+                key={s.id}
+                s={s}
+                topic={topicById[s.topicId]}
+                users={users}
+                layout={lay}
+                expandedSize={{ w: EXP_W, h: EXP_H }}
+                expanded={isExpanded}
+                dimmed={isOtherExpanded}
+                atoms={isExpanded ? visibleAtomsFor(s.id) : []}
+                reactions={reactionsState}
+                filters={filters}
+                onClick={() => !isExpanded && expandSubtopic(s)}
+                onCollapse={collapseSubtopic}
+                onAtomMouseDown={onAtomMouseDown}
+                onAtomClick={(a) => setHighlight(prev => prev === a.id ? null : a.id)}
+                onAtomReact={addReaction}
+                highlight={highlight}
+                pulse={pulse}
+                onOpenProposal={onOpenProposal}
+                onOpenAtomization={onOpenAtomization}
+              />
+            );
+          })}
+
+          {/* Floater atoms drifting in negative space */}
+          {!expanded && floatersState.map(f => {
+            const lay = floaterLayouts[f.id];
+            if (!lay) return null;
+            // hide floaters that are in a crystallized cluster
+            const inCluster = clusterSuggestions.find(cs => cs.atomIds.includes(f.id));
+            if (inCluster && crystallized[inCluster.id]) return null;
+            return <FloaterAtom key={f.id} f={f} pos={lay} users={users} />;
+          })}
+
+          {/* Cluster crystallization suggestion */}
+          {!expanded && clusterSuggestions.map(cs => {
+            if (crystallized[cs.id]) {
+              // render as new (provisional) subtopic
+              const t = topicById[cs.topicId];
+              if (!t) return null;
+              // place in lower-right of topic
+              return (
+                <div key={cs.id} style={{
+                  position: 'absolute',
+                  left: t.x + t.w - 290, top: t.y + t.h - 220,
+                  width: 270, height: 200,
+                  background: 'var(--bg-elev)',
+                  border: '2px solid var(--amber)', borderRadius: 16,
+                  boxShadow: 'var(--sh-3)', padding: 18,
+                }}>
+                  <div className="mono tiny" style={{ color: 'var(--amber-ink)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>New subtopic · just now</div>
+                  <div className="serif" style={{ fontSize: 18, fontWeight: 500, marginTop: 6 }}>{cs.proposedTitle}</div>
+                  <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.4 }}>Crystallized from 3 floating atoms</div>
+                  <div className="row gap-2" style={{ marginTop: 10 }}>
+                    {['rose','amber','citron'].map(c => (
+                      <span key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: `var(--u-${c})` }}/>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            // Find center of the floater cluster
+            const positions = cs.atomIds.map(id => floaterLayouts[id]).filter(Boolean);
+            if (positions.length < 2) return null;
+            const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+            const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+            return (
+              <ClusterSuggestion key={cs.id}
+                cs={cs}
+                positions={positions}
+                center={{ x: cx, y: cy }}
+                onAccept={() => acceptCluster(cs)}
+              />
+            );
+          })}
+        </div>
+
+        {/* Bottom-dock input */}
+        <div className="input-dock canvas-control" style={{ left: '50%', transform: 'translateX(-50%)', maxWidth: 760 }}>
+          <button className="icon-btn" title="Voice"><Icon name="mic" size={16}/></button>
+          <input
+            placeholder={expanded
+              ? `Add to "${subById[expanded].title}"…`
+              : `Add to ${domain.title}… (gets atomized & routed)`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                onOpenAtomization(e.currentTarget.value, expanded);
+                e.currentTarget.value = '';
+              }
+            }}
+          />
+          <button className="btn btn-ghost btn-sm"><Icon name="wand" size={13}/> AI assist</button>
+          <button className="btn btn-primary btn-sm" onClick={() => onOpenAtomization('', expanded)}>
+            <Icon name="send" size={12}/> Atomize
+          </button>
+        </div>
+
+        {/* Zoom controls */}
+        <div className="zoom-ctl">
+          <button onClick={() => zoomBtn(0.15)}><Icon name="plus" size={13}/></button>
+          <div className="div"/>
+          <button onClick={() => zoomBtn(-0.15)}><Icon name="minus" size={13}/></button>
+        </div>
+
+        {/* Collapse-back hint when expanded */}
+        {expanded && (
+          <button
+            className="canvas-control btn btn-ghost btn-sm"
+            style={{ position: 'absolute', top: 16, left: 16, zIndex: 30, background: 'rgba(255,255,255,0.92)' }}
+            onClick={collapseSubtopic}
+          >
+            <Icon name="arrow-left" size={12}/> Back to map
+          </button>
+        )}
+      </div>
+
+      {/* Right-edge AI Summary rail */}
+      <AiSummaryRail
+        open={aiRailOpen}
+        onToggle={() => setAiRailOpen(v => !v)}
+        domain={domain}
+        expanded={expanded ? subById[expanded] : null}
+        summary={summary}
+        insights={insights}
+        clusterSuggestions={clusterSuggestions.filter(cs => !crystallized[cs.id])}
+        onAcceptCluster={acceptCluster}
+        onOpenInsight={onOpenInsight}
+        onRefClick={(atomId) => {
+          setHighlight(atomId);
+          setTimeout(() => setHighlight(null), 1700);
+        }}
+        onOpenProposal={onOpenProposal}
+      />
+    </div>
+  );
+}
+
+// ===== Topic region (background canvas block) =====
+function TopicRegion({ t, dimmed }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      left: t.x, top: t.y, width: t.w, height: t.h,
+      background: t.hue,
+      borderRadius: 32,
+      border: '1px dashed rgba(60,50,30,0.18)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,.5)',
+      opacity: dimmed ? 0.35 : 1,
+      transition: 'opacity 220ms',
+      pointerEvents: 'none',
+    }}>
+      <div style={{ position: 'absolute', top: 22, left: 32 }}>
+        <div className="mono tiny" style={{ letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-4)' }}>Topic</div>
+        <div className="serif italic" style={{ fontSize: 26, color: 'var(--ink-2)', letterSpacing: '-0.01em', marginTop: 2 }}>{t.title}</div>
+        {t.tagline && (
+          <div className="serif" style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4, fontStyle: 'italic', maxWidth: t.w - 80 }}>
+            {t.tagline}
+          </div>
+        )}
+      </div>
+      <div className="mono tiny muted" style={{ position: 'absolute', top: 28, right: 32 }}>
+        {t.contributors} contributors
+      </div>
+    </div>
+  );
+}
+
+// ===== Subtopic card (collapsed = preview, expanded = full detail) =====
+function SubtopicCard({
+  s, topic, users, layout, expandedSize, expanded, dimmed,
+  atoms, reactions, filters,
+  onClick, onCollapse, onAtomMouseDown, onAtomClick, onAtomReact,
+  highlight, pulse, onOpenProposal, onOpenAtomization,
+}) {
+  const W = expanded ? expandedSize.w : layout.w;
+  const H = expanded ? expandedSize.h : layout.h;
+  // when expanded, lift the card into a stable position relative to its topic for visual grounding
+  const X = expanded ? layout.x - (W - layout.w) / 2 : layout.x;
+  const Y = expanded ? layout.y - 40 : layout.y;
+
+  // Build voice avatars
+  const voiceUserIds = useMemo(() => {
+    const ids = new Set();
+    atoms.forEach(a => { if (a.kind === 'human') ids.add(a.authorId); });
+    return [...ids];
+  }, [atoms]);
+
+  return (
+    <div
+      data-subtopic={s.id}
+      className="subtopic-card"
+      style={{
+        position: 'absolute',
+        left: X, top: Y,
+        width: W, height: H,
+        background: 'var(--bg-elev)',
+        borderRadius: 20,
+        border: '1px solid var(--line)',
+        boxShadow: expanded ? 'var(--sh-3)' : 'var(--sh-1)',
+        opacity: dimmed ? 0.18 : 1,
+        cursor: expanded ? 'default' : 'pointer',
+        transition: 'left 320ms cubic-bezier(.4,0,.2,1), top 320ms cubic-bezier(.4,0,.2,1), width 320ms cubic-bezier(.4,0,.2,1), height 320ms cubic-bezier(.4,0,.2,1), opacity 220ms, box-shadow 220ms',
+        overflow: 'hidden',
+        zIndex: expanded ? 20 : 5,
+      }}
+      onClick={!expanded ? onClick : undefined}
+    >
+      {/* Header */}
+      <div style={{
+        padding: expanded ? '20px 26px 16px' : '16px 18px 12px',
+        borderBottom: expanded ? '1px solid var(--line)' : 'none',
+        position: 'relative',
+      }}>
+        <div className="row gap-2" style={{ marginBottom: 4, alignItems: 'center' }}>
+          <span className="mono tiny" style={{ letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-4)' }}>Subtopic</span>
+          {s.hot && !expanded && (
+            <span className="chip" style={{ background: 'var(--amber-soft)', borderColor: 'transparent', color: 'var(--amber-ink)', fontSize: 10, padding: '2px 6px' }}>
+              <Icon name="sparkle" size={9}/> active
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto' }}>
+            <Maturity value={s.maturity} />
+          </span>
+          {expanded && (
+            <button className="icon-btn" onClick={(e) => { e.stopPropagation(); onCollapse(); }} title="Collapse">
+              <Icon name="x" size={14}/>
+            </button>
+          )}
+        </div>
+        <div className="serif" style={{
+          fontSize: expanded ? 30 : 18, fontWeight: 500, letterSpacing: '-0.015em', lineHeight: 1.15,
+          marginTop: 2,
+        }}>{s.title}</div>
+        {!expanded && (
+          <div className="muted" style={{ fontSize: 12, lineHeight: 1.45, marginTop: 6 }}>{s.blurb}</div>
+        )}
+        {!expanded && (
+          <div className="row gap-3 tiny muted" style={{ marginTop: 12, alignItems: 'center' }}>
+            <span className="row gap-1">
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ink-3)' }}/>
+              {s.atomCount} atoms
+            </span>
+            <span className="row gap-1">
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--u-rose)' }}/>
+              {s.contributors} voices
+            </span>
+            <span className="row gap-1">
+              <span style={{ width: 6, height: 6, background: 'var(--ink-2)' }}/>
+              {s.lit} lit
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div style={{
+          position: 'absolute', top: 100, left: 0, right: 0, bottom: 0,
+          display: 'grid', gridTemplateColumns: '320px 1fr', gap: 0,
+        }}>
+          {/* Left: framing + tensions + questions */}
+          <div style={{
+            padding: '20px 24px',
+            borderRight: '1px solid var(--line)',
+            overflowY: 'auto',
+            background: 'rgba(248,245,238,0.5)',
+          }}>
+            <div className="mono tiny" style={{ letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-4)', marginBottom: 8 }}>Framing</div>
+            <p className="serif" style={{
+              fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)',
+              marginTop: 0, marginBottom: 18,
+            }}
+              dangerouslySetInnerHTML={{ __html: (s.framing || s.blurb).replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:500;color:var(--ink)">$1</strong>') }}
+            />
+
+            {s.tensions && s.tensions.length > 0 && (
+              <>
+                <div className="mono tiny" style={{ letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-4)', marginBottom: 8 }}>Tensions</div>
+                <div style={{ marginBottom: 18 }}>
+                  {s.tensions.map((t, i) => (
+                    <div key={i} style={{
+                      borderLeft: '2px solid var(--challenge)',
+                      paddingLeft: 12, marginBottom: 10,
+                    }}>
+                      <div className="serif" style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{t.label}</div>
+                      <div className="muted" style={{ fontSize: 12, lineHeight: 1.45 }}>{t.text}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {s.questions && s.questions.length > 0 && (
+              <>
+                <div className="mono tiny" style={{ letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-4)', marginBottom: 8 }}>Open questions</div>
+                <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+                  {s.questions.map((q, i) => (
+                    <li key={i} className="serif italic" style={{
+                      fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)',
+                      marginBottom: 8, paddingLeft: 16, position: 'relative',
+                    }}>
+                      <span style={{ position: 'absolute', left: 0, top: 0, color: 'var(--ink-4)' }}>?</span>
+                      {q}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+              <div className="row gap-3 tiny muted" style={{ marginBottom: 10 }}>
+                <span>{atoms.length} atoms</span>
+                <span>{voiceUserIds.length} voices</span>
+                <span>{s.lit} lit</span>
+              </div>
+              <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+                {voiceUserIds.slice(0, 6).map(uid => {
+                  const u = users.find(x => x.id === uid);
+                  return u ? <Avatar key={uid} user={u} size={22}/> : null;
+                })}
+              </div>
+              {s.maturity > 0.8 && (
+                <button className="btn btn-amber" style={{ marginTop: 14, width: '100%' }} onClick={(e) => { e.stopPropagation(); onOpenProposal(); }}>
+                  <Icon name="sparkle" size={13}/> Generate proposal
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right: atom canvas */}
+          <div className="atom-host" style={{ position: 'relative', overflow: 'hidden', background: 'var(--paper)' }}>
+            {/* small grid texture */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: 'radial-gradient(circle, rgba(110,90,60,0.05) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+              pointerEvents: 'none',
+            }}/>
+            <ReactionEdges atoms={atoms} reactions={reactions.filter(r => atoms.find(a => a.id === r.from) && atoms.find(a => a.id === r.to))} hideKinds={filters.hideEdges} />
+            {atoms.map(a => (
+              <div
+                key={a.id}
+                onMouseDown={(e) => onAtomMouseDown(e, a)}
+                style={{ position: 'absolute', left: 0, top: 0, cursor: 'grab' }}
+              >
+                <AtomNode
+                  atom={a}
+                  users={users}
+                  selected={highlight === a.id}
+                  highlighted={highlight === a.id || pulse.includes(a.id)}
+                  onClick={() => onAtomClick(a)}
+                  onContext={() => {}}
+                  colorByUser={!filters.hideColors}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Floater atom (small, drifting in negative space) =====
+function FloaterAtom({ f, pos, users }) {
+  const author = users.find(u => u.id === f.authorId);
+  const [hover, setHover] = useState(false);
+  const isLit = f.kind === 'lit';
+  return (
+    <div
+      style={{
+        position: 'absolute', left: pos.x, top: pos.y,
+        width: 200,
+        background: isLit ? '#2A2724' : 'rgba(255,253,247,0.85)',
+        color: isLit ? '#E8E2D0' : 'var(--ink-2)',
+        border: isLit ? 'none' : '1px dashed rgba(120,100,70,0.4)',
+        borderRadius: isLit ? 6 : 12,
+        padding: '10px 12px',
+        fontFamily: isLit ? 'var(--f-mono)' : 'var(--f-hand)',
+        fontSize: isLit ? 11 : 12,
+        lineHeight: 1.4,
+        opacity: hover ? 1 : 0.8,
+        transform: `rotate(${(f.id.charCodeAt(2) % 7) - 3}deg)`,
+        boxShadow: hover ? 'var(--sh-2)' : 'none',
+        cursor: 'default',
+        zIndex: 4,
+        pointerEvents: 'auto',
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {f.text}
+      {author && !isLit && (
+        <div className="row gap-2" style={{ marginTop: 6, fontFamily: 'var(--f-sans)', fontSize: 9, color: 'var(--ink-4)' }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: author.colorVar || 'var(--ink-4)' }}/>
+          <span>{author.name}</span>
+          <span style={{ marginLeft: 'auto', fontStyle: 'italic' }}>floating</span>
+        </div>
+      )}
+      {isLit && (
+        <div style={{ marginTop: 5, fontSize: 9, opacity: 0.7 }}>{f.cite}</div>
+      )}
+    </div>
+  );
+}
+
+// ===== Cluster crystallization suggestion (drawn around 3+ floaters) =====
+function ClusterSuggestion({ cs, positions, center, onAccept }) {
+  const minX = Math.min(...positions.map(p => p.x));
+  const minY = Math.min(...positions.map(p => p.y));
+  const maxX = Math.max(...positions.map(p => p.x + 200));
+  const maxY = Math.max(...positions.map(p => p.y + 70));
+  const padding = 20;
+  return (
+    <>
+      {/* Halo around floaters */}
+      <div style={{
+        position: 'absolute',
+        left: minX - padding, top: minY - padding,
+        width: maxX - minX + padding * 2,
+        height: maxY - minY + padding * 2,
+        border: '1.5px dashed var(--amber)',
+        borderRadius: 20,
+        background: 'rgba(220,180,80,0.05)',
+        pointerEvents: 'none',
+        zIndex: 3,
+      }}/>
+      {/* Suggestion bubble */}
+      <div style={{
+        position: 'absolute',
+        left: maxX + padding + 10, top: minY - padding,
+        width: 240,
+        background: 'var(--bg-elev)',
+        border: '1.5px solid var(--amber)',
+        borderRadius: 14,
+        padding: 14,
+        boxShadow: 'var(--sh-2)',
+        zIndex: 6,
+      }}>
+        <div className="mono tiny" style={{ color: 'var(--amber-ink)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+          <Icon name="sparkle" size={10}/> Crystallizing
+        </div>
+        <div className="serif" style={{ fontSize: 16, fontWeight: 500, marginTop: 4 }}>{cs.proposedTitle}</div>
+        <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.4 }}>{cs.reason}</div>
+        <div className="row gap-2" style={{ marginTop: 12 }}>
+          <button className="btn btn-amber btn-sm" onClick={onAccept}>Crystallize</button>
+          <button className="btn btn-ghost btn-sm">Not yet</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ===== Right-edge AI Summary rail =====
+function AiSummaryRail({
+  open, onToggle, domain, expanded, summary, insights,
+  clusterSuggestions, onAcceptCluster,
+  onOpenInsight, onRefClick, onOpenProposal,
+}) {
+  return (
+    <>
+      {/* Toggle handle — only shown when rail is closed */}
+      {!open && (
+        <button
+          className="canvas-control"
+          onClick={onToggle}
+          style={{
+            position: 'absolute', top: 160, right: 0,
+            zIndex: 35,
+            background: 'var(--bg-elev)', border: '1px solid var(--line)',
+            borderRight: 'none',
+            borderRadius: '8px 0 0 8px',
+            padding: '12px 8px', cursor: 'pointer',
+            boxShadow: 'var(--sh-1)',
+          }}
+          title="Show summary"
+        >
+          <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+            <span className="row gap-2" style={{ alignItems: 'center' }}>
+              <span className="ai-orb" style={{ width: 10, height: 10 }}/>
+              <span className="mono tiny" style={{ letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                AI Summary
+              </span>
+            </span>
+          </div>
+        </button>
+      )}
+      {/* Rail panel */}
+      <div style={{
+        position: 'absolute',
+        top: 112, bottom: 0, right: 0, width: 340,
+        background: 'rgba(252,250,246,0.95)',
+        backdropFilter: 'blur(10px)',
+        borderLeft: '1px solid var(--line)',
+        zIndex: 28,
+        transform: open ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 220ms',
+        overflowY: 'auto',
+      }}>
+        <div style={{ padding: '20px 22px' }}>
+          <div className="row gap-2" style={{ alignItems: 'center', marginBottom: 4 }}>
+            <span className="ai-orb"/>
+            <span className="mono tiny" style={{ letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>AI Summary</span>
+            <span className="tiny muted" style={{ marginLeft: 'auto' }}>conf {Math.round(summary.confidence * 100)}%</span>
+            <button
+              onClick={onToggle}
+              title="Hide summary"
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                padding: 4, borderRadius: 6, color: 'var(--ink-3)',
+                display: 'inline-flex', alignItems: 'center',
+              }}
+            >
+              <Icon name="x" size={14}/>
+            </button>
+          </div>
+          <div className="mono tiny muted" style={{ marginBottom: 12 }}>
+            {expanded ? `for "${expanded.title}"` : `for ${domain.title}`}
+          </div>
+
+          {/* Domain-level summary or expanded subtopic summary */}
+          <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)' }}>
+            {expanded ? (
+              <>
+                <p className="serif" style={{ margin: '0 0 10px', fontSize: 14, lineHeight: 1.55 }}>
+                  {summary.short}
+                </p>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  {summary.long.map((s, i) => (
+                    <li key={i} style={{ marginBottom: 8 }}>
+                      {s.text}
+                      {s.refs && s.refs.length > 0 && (
+                        <span className="row gap-1" style={{ display: 'inline-flex', marginLeft: 6, flexWrap: 'wrap' }}>
+                          {s.refs.map(r => (
+                            <span key={r}
+                              className="mono tiny"
+                              style={{
+                                padding: '1px 6px', borderRadius: 4,
+                                background: 'var(--bg-tint)', border: '1px solid var(--line)',
+                                color: 'var(--ink-3)', cursor: 'pointer', fontSize: 10,
+                              }}
+                              onClick={() => onRefClick(r)}
+                            >{r}</span>
+                          ))}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="serif" style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>
+                {domain.title} is currently shaped around <em>tutoring, equity, assessment, agency, and teacher workflows</em>.
+                The most active threads are <strong style={{ fontWeight: 500 }}>adaptive scaffolding</strong> and <strong style={{ fontWeight: 500 }}>metacognition support</strong> — both pulling on the same tension between assistance and awareness.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Insights — compact list */}
+        <div style={{ padding: '0 22px 18px' }}>
+          <div className="mono tiny" style={{ letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-4)', marginBottom: 8 }}>Insights</div>
+          {insights.map((ins, i) => (
+            <div key={i}
+              style={{ padding: '10px 10px', cursor: 'pointer', display: 'flex', gap: 10, marginBottom: 6, borderRadius: 8, background: 'var(--bg-tint)', border: '1px solid var(--line-2)' }}
+              onClick={() => onOpenInsight(ins)}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ink-4)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; }}
+            >
+              <div style={{ width: 3, borderRadius: 2, background:
+                ins.kind === 'tension' ? 'var(--challenge)' :
+                ins.kind === 'convergence' ? 'var(--support)' : 'var(--cite)' }} />
+              <div style={{ flex: 1 }}>
+                <div className="mono tiny" style={{ letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-4)', fontSize: 9 }}>
+                  {ins.kind === 'tension' ? 'Tension' : ins.kind === 'convergence' ? 'Convergence' : 'Edge potential'}
+                </div>
+                <div className="serif" style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3, marginTop: 1 }}>{ins.title}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Cluster suggestions */}
+        {clusterSuggestions.length > 0 && (
+          <div style={{ padding: '0 22px 22px' }}>
+            <div className="mono tiny" style={{ letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--amber-ink)', marginBottom: 8 }}>
+              <Icon name="sparkle" size={10}/> Crystallizing
+            </div>
+            {clusterSuggestions.map(cs => (
+              <div key={cs.id} style={{
+                padding: 12, marginBottom: 8, borderRadius: 10,
+                background: 'var(--amber-soft)', border: '1px solid var(--amber)',
+              }}>
+                <div className="serif" style={{ fontSize: 13, fontWeight: 500 }}>{cs.proposedTitle}</div>
+                <div className="tiny muted" style={{ marginTop: 4, lineHeight: 1.4 }}>{cs.reason}</div>
+                <div className="row gap-2" style={{ marginTop: 8 }}>
+                  <button className="btn btn-amber btn-sm" onClick={() => onAcceptCluster(cs)}>Crystallize</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {expanded && expanded.maturity > 0.8 && (
+          <div style={{ padding: '0 22px 22px' }}>
+            <button className="btn btn-amber" style={{ width: '100%' }} onClick={onOpenProposal}>
+              <Icon name="sparkle" size={13}/> Generate proposal
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+window.DomainCanvas = DomainCanvas;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== screen-atomize.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+// ===== Screen D — Atomization Preview =====
+
+function AtomizationPreview({ open, originalText, you, onClose, onConfirm }) {
+  const [proposals, setProposals] = useState([]);
+  const [origText, setOrigText] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    const text = originalText || "I think AI tutoring should consider learners' metacognition — especially when decomposing complex problems. Also, scaffolding has strong literature support — Wood et al. is the classic.";
+    setOrigText(text);
+    setProposals([
+      {
+        id: 'p1', text: "AI tutoring should consider metacognition.",
+        target: 'Metacognition Support', confidence: 0.86, status: 'pending',
+        sourceSpan: [0, 56],
+      },
+      {
+        id: 'p2', text: "Scaffolding for complex problem decomposition matters.",
+        target: 'Adaptive Scaffolding', confidence: 0.81, status: 'pending',
+        sourceSpan: [60, 130],
+      },
+      {
+        id: 'p3', text: "Wood et al. provides foundational support for scaffolding.",
+        target: 'Adaptive Scaffolding', confidence: 0.74, status: 'pending', autoCite: true,
+        sourceSpan: [134, 200],
+      },
+    ]);
+  }, [open, originalText]);
+
+  if (!open) return null;
+
+  const setStatus = (id, status) => setProposals(ps => ps.map(p => p.id === id ? { ...p, status } : p));
+  const updateText = (id, text) => setProposals(ps => ps.map(p => p.id === id ? { ...p, text } : p));
+  const updateTarget = (id, target) => setProposals(ps => ps.map(p => p.id === id ? { ...p, target } : p));
+
+  const acceptAll = () => setProposals(ps => ps.map(p => ({ ...p, status: 'accepted' })));
+  const mergeAll = () => {
+    setProposals(ps => [{
+      id: 'merged',
+      text: ps.map(p => p.text).join(' / '),
+      target: 'Adaptive Scaffolding',
+      confidence: 0.62,
+      status: 'accepted',
+      merged: true,
+    }]);
+  };
+
+  const accepted = proposals.filter(p => p.status !== 'rejected');
+  const allReady = proposals.every(p => p.status !== 'pending');
+
+  return (
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ padding: 0, maxWidth: 760 }}>
+        <div style={{ padding: '24px 28px 18px', borderBottom: '1px solid var(--line)' }}>
+          <div className="row" style={{ marginBottom: 10 }}>
+            <span className="mono tiny muted" style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}>Atomization preview</span>
+            <button className="icon-btn" style={{ marginLeft: 'auto' }} onClick={onClose}><Icon name="x" size={14}/></button>
+          </div>
+          <h2 className="serif" style={{ margin: 0, fontSize: 24, fontWeight: 500, letterSpacing: '-0.01em' }}>
+            Review how your contribution gets split
+          </h2>
+          <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+            You can accept, edit, merge, re-route, or reject any atom. Nothing enters the canvas until you confirm.
+          </p>
+        </div>
+
+        {/* Original input */}
+        <div style={{ padding: '18px 28px', background: 'var(--bg-tint)', borderBottom: '1px solid var(--line)' }}>
+          <div className="row gap-2" style={{ marginBottom: 8 }}>
+            <Avatar user={you} size={20}/>
+            <span className="tiny muted">You said</span>
+          </div>
+          <p className="hand" style={{ margin: 0, fontSize: 19, lineHeight: 1.35, color: 'var(--ink)' }}>
+            "{origText}"
+          </p>
+        </div>
+
+        {/* Proposed atoms */}
+        <div style={{ padding: '18px 28px' }}>
+          <div className="row" style={{ marginBottom: 14 }}>
+            <span className="mono tiny muted">AI proposed {proposals.length} atom{proposals.length !== 1 ? 's' : ''}</span>
+            <span style={{ marginLeft: 'auto' }} className="row gap-2">
+              <button className="btn btn-ghost btn-sm" onClick={mergeAll}><Icon name="merge" size={12}/> Merge all into one</button>
+              <button className="btn btn-sm" onClick={acceptAll}><Icon name="check" size={12}/> Accept all</button>
+            </span>
+          </div>
+
+          <div className="col gap-3">
+            {proposals.map((p, idx) => (
+              <ProposalRow key={p.id}
+                p={p}
+                index={idx + 1}
+                you={you}
+                onAccept={() => setStatus(p.id, 'accepted')}
+                onReject={() => setStatus(p.id, 'rejected')}
+                onText={(t) => updateText(p.id, t)}
+                onTarget={(t) => updateTarget(p.id, t)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: '14px 28px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="tiny muted">
+            {accepted.length} of {proposals.length} will join the canvas. Rejected items stay private.
+          </span>
+          <span style={{ marginLeft: 'auto' }} className="row gap-2">
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => onConfirm(accepted)}>
+              <Icon name="send" size={12}/> Add {accepted.length} atom{accepted.length !== 1 ? 's' : ''}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProposalRow({ p, index, you, onAccept, onReject, onText, onTarget }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(p.text);
+  const targets = ['Adaptive Scaffolding', 'Metacognition Support', 'Dialogic Tutoring', 'Self-regulation', '+ New subtopic'];
+  const isRejected = p.status === 'rejected';
+  const isAccepted = p.status === 'accepted';
+
+  return (
+    <div style={{
+      border: '1px solid var(--line)',
+      borderRadius: 12,
+      padding: 14,
+      background: isRejected ? 'var(--bg-tint)' : 'var(--bg-elev)',
+      opacity: isRejected ? 0.5 : 1,
+      transition: 'all 200ms',
+    }}>
+      <div className="row gap-3">
+        <div style={{ minWidth: 32 }}>
+          <span className="mono tiny muted" style={{ fontSize: 10, letterSpacing: '0.1em' }}>ATOM</span>
+          <div className="serif" style={{ fontSize: 18, fontWeight: 500, lineHeight: 1 }}>{String(index).padStart(2,'0')}</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          {/* Sticky preview of the atom */}
+          <div style={{ display: 'inline-block', maxWidth: 460 }}>
+            <div className="atom-human" style={{
+              position: 'relative',
+              background: you.bg,
+              transform: `rotate(${(index % 2 ? -1 : 1) * 0.8}deg)`,
+              fontSize: 17,
+              padding: editing ? '8px 10px 10px' : undefined,
+            }}>
+              {editing ? (
+                <textarea
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onBlur={() => { setEditing(false); onText(text); }}
+                  autoFocus
+                  style={{
+                    width: '100%', minHeight: 50,
+                    border: 'none', background: 'transparent', resize: 'vertical',
+                    fontFamily: 'var(--f-hand)', fontSize: 17, lineHeight: 1.2, outline: 'none',
+                  }}
+                />
+              ) : (
+                <span>{p.text}</span>
+              )}
+              <div className="meta">
+                <span className="dot" style={{ color: you.colorVar }}/>
+                <span>You</span>
+                <span style={{ marginLeft: 'auto' }} className="mono tiny">conf {Math.round(p.confidence*100)}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Routing */}
+          <div className="row gap-2" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+            <span className="tiny muted">Routes to</span>
+            <select
+              value={p.target}
+              onChange={e => onTarget(e.target.value)}
+              style={{
+                border: '1px solid var(--line)', background: 'var(--bg-elev)',
+                borderRadius: 6, padding: '3px 8px', fontFamily: 'var(--f-sans)', fontSize: 12,
+              }}
+            >
+              {targets.map(t => <option key={t}>{t}</option>)}
+            </select>
+            {p.autoCite && (
+              <span className="chip" style={{ background: 'color-mix(in oklch, var(--cite) 14%, white)', color: 'var(--cite)', borderColor: 'transparent' }}>
+                <Icon name="sparkle" size={10}/> Auto Cite detected
+              </span>
+            )}
+            {isAccepted && (
+              <span className="chip" style={{ background: 'color-mix(in oklch, var(--support) 16%, white)', color: 'var(--support)', borderColor: 'transparent' }}>
+                <Icon name="check" size={10}/> Accepted
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="col gap-2" style={{ alignSelf: 'flex-start' }}>
+          <button className="btn btn-sm" onClick={onAccept}><Icon name="check" size={12}/></button>
+          <button className="btn btn-sm" onClick={() => setEditing(!editing)}><Icon name="edit" size={12}/></button>
+          <button className="btn btn-sm" onClick={onReject}><Icon name="x" size={12}/></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.AtomizationPreview = AtomizationPreview;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== screen-extras.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+// ===== Screens E (Dashboard), F (Proposal), G (Collaborators) =====
+
+// ----- Personal Dashboard -----
+function Dashboard({ open, you, dashboard, users, onClose }) {
+  if (!open) return null;
+  const near = dashboard.nearNeighbors.map(id => users.find(u => u.id === id)).filter(Boolean);
+  const far = dashboard.farNeighbors.map(id => users.find(u => u.id === id)).filter(Boolean);
+  return (
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={e => e.stopPropagation()} style={{ maxWidth: 900, padding: 0 }}>
+        <div style={{ padding: '24px 28px 6px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar user={you} size={42} />
+          <div style={{ flex: 1 }}>
+            <div className="mono tiny muted" style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}>Your dashboard</div>
+            <div className="serif" style={{ fontSize: 24, fontWeight: 500 }}>Where your atoms have landed</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+        <div style={{ padding: 28, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="card" style={{ padding: 18, gridColumn: 'span 2' }}>
+            <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
+              <Stat label="Atoms contributed" value={dashboard.atoms} />
+              <Stat label="Support received" value={dashboard.receivedSupport} />
+              <Stat label="Refines from others" value={dashboard.receivedRefine} />
+              <Stat label="Citations" value={dashboard.citations} />
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="tiny muted">Your color</span>
+                <ColorDot user={you} size={14}/>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 18 }}>
+            <div className="serif italic" style={{ fontSize: 16, marginBottom: 10 }}>Near neighbors · With You</div>
+            <div className="col gap-2">
+              {near.map(u => (
+                <div key={u.id} className="row gap-2">
+                  <Avatar user={u} size={26}/>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{u.name}</div>
+                    <div className="tiny muted">{u.role} · 5 mutual atoms</div>
+                  </div>
+                  <button className="btn btn-sm">Message</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 18 }}>
+            <div className="serif italic" style={{ fontSize: 16, marginBottom: 10, color: 'var(--amber-ink)' }}>Far neighbors · Stretch You</div>
+            <div className="col gap-2">
+              {far.map(u => (
+                <div key={u.id} className="row gap-2">
+                  <Avatar user={u} size={26}/>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{u.name}</div>
+                    <div className="tiny muted">{u.role} · same subtopic, different lens</div>
+                  </div>
+                  <button className="btn btn-sm">Invite</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 18, gridColumn: 'span 2' }}>
+            <div className="serif italic" style={{ fontSize: 16, marginBottom: 10 }}>You haven't visited yet</div>
+            <div className="row gap-3" style={{ flexWrap: 'wrap' }}>
+              {dashboard.suggestions.map(s => (
+                <div key={s.topic} style={{ padding: 12, border: '1px dashed var(--line)', borderRadius: 10, minWidth: 240 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{s.topic}</div>
+                  <div className="tiny muted">{s.reason}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+window.Dashboard = Dashboard;
+
+// ----- Proposal generation -----
+function Proposal({ open, proposal, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={e => e.stopPropagation()} style={{ maxWidth: 820, padding: 0 }}>
+        <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
+          <div>
+            <div className="mono tiny muted" style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}>Generated proposal · draft</div>
+            <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{proposal.title}</div>
+          </div>
+          <div style={{ marginLeft: 'auto' }} className="row gap-2">
+            <button className="btn btn-sm">Edit</button>
+            <button className="btn btn-sm">Download</button>
+            <button className="btn btn-primary btn-sm"><Icon name="sparkle" size={12}/> Promote to Topic</button>
+            <button className="icon-btn" onClick={onClose}><Icon name="x" size={14}/></button>
+          </div>
+        </div>
+        <div style={{ padding: 28, display: 'grid', gridTemplateColumns: '1fr 220px', gap: 24 }}>
+          <div>
+            {proposal.sections.map((s, i) => (
+              <div key={i} style={{ marginBottom: 22 }}>
+                <div className="serif" style={{ fontSize: 18, fontWeight: 500, marginBottom: 6 }}>{s.heading}</div>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)' }}>{s.body}</p>
+                <div className="row gap-2 tiny muted" style={{ marginTop: 8 }}>
+                  <span className="mono">SOURCES</span>
+                  <SourceBar sources={s.sources}/>
+                </div>
+              </div>
+            ))}
+          </div>
+          <aside>
+            <div className="card" style={{ padding: 14 }}>
+              <div className="serif italic" style={{ fontSize: 14, marginBottom: 8 }}>Composition</div>
+              <div className="tiny muted" style={{ marginBottom: 8 }}>How this proposal was sourced.</div>
+              <SourceBar sources={{ human: 0.63, lit: 0.23, ai: 0.14 }} stacked/>
+              <div className="row gap-2 tiny" style={{ marginTop: 10 }}>
+                <span className="row gap-2"><span style={{ width: 8, height: 8, background: 'var(--u-amber)' }}/> Human 63%</span>
+              </div>
+              <div className="row gap-2 tiny" style={{ marginTop: 4 }}>
+                <span className="row gap-2"><span style={{ width: 8, height: 8, background: '#2A2724' }}/> Literature 23%</span>
+              </div>
+              <div className="row gap-2 tiny" style={{ marginTop: 4 }}>
+                <span className="row gap-2"><span style={{ width: 8, height: 8, border: '1px dashed var(--ink-3)' }}/> AI polish 14%</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SourceBar({ sources, stacked }) {
+  const w = stacked ? 180 : 120;
+  return (
+    <div style={{ width: w, height: 6, borderRadius: 3, overflow: 'hidden', display: 'flex', background: 'var(--line)' }}>
+      <div style={{ width: `${sources.human*100}%`, background: 'var(--u-amber)' }}/>
+      <div style={{ width: `${sources.lit*100}%`, background: '#2A2724' }}/>
+      <div style={{ width: `${sources.ai*100}%`, background: 'repeating-linear-gradient(45deg, var(--ink-4) 0 3px, transparent 3px 6px)' }}/>
+    </div>
+  );
+}
+
+window.Proposal = Proposal;
+
+// ----- Collaborators -----
+function Collaborators({ open, users, you, onClose }) {
+  if (!open) return null;
+  const withYou = users.filter(u => ['u-mei','u-ravi','u-sora'].includes(u.id));
+  const stretch = users.filter(u => ['u-finn','u-noor','u-jules'].includes(u.id));
+  return (
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={e => e.stopPropagation()} style={{ maxWidth: 880, padding: 0 }}>
+        <div style={{ padding: '22px 28px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
+          <div>
+            <div className="mono tiny muted" style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}>Find collaborators</div>
+            <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>Two ways to grow your circle</div>
+          </div>
+          <button className="icon-btn" style={{ marginLeft: 'auto' }} onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+        <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <CollabColumn title="With You" subtitle="Close color · many shared atoms" tone="neutral" users={withYou} mode="message"/>
+          <CollabColumn title="Stretch You" subtitle="Different background · same subtopic" tone="amber" users={stretch} mode="invite"/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CollabColumn({ title, subtitle, tone, users, mode }) {
+  return (
+    <div>
+      <div className="row gap-2" style={{ marginBottom: 10 }}>
+        <span className="serif italic" style={{ fontSize: 18, color: tone === 'amber' ? 'var(--amber-ink)' : 'var(--ink)' }}>{title}</span>
+        <span className="tiny muted">{subtitle}</span>
+      </div>
+      <div className="col gap-2">
+        {users.map(u => (
+          <div key={u.id} className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Avatar user={u} size={36}/>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{u.name}</div>
+              <div className="tiny muted">{u.role}</div>
+            </div>
+            <div className="col" style={{ alignItems: 'flex-end' }}>
+              <span className="tiny muted">{Math.floor(Math.random()*5)+1} mutual atoms</span>
+              <button className="btn btn-sm" style={{ marginTop: 4 }}>{mode === 'message' ? 'Message' : 'Invite'}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+window.Collaborators = Collaborators;
+
+// ----- Insight modal -----
+function InsightModal({ insight, atoms, users, onClose }) {
+  if (!insight) return null;
+  const involved = atoms.filter(a => insight.atomIds.includes(a.id));
+  return (
+    <div className="modal-back" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={e => e.stopPropagation()} style={{ maxWidth: 620, padding: 26 }}>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <span className="mono tiny muted" style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+            {insight.kind === 'tension' ? 'Constructive tension' : insight.kind === 'convergence' ? 'Converging cluster' : 'Edge potential'}
+          </span>
+          <button className="icon-btn" style={{ marginLeft: 'auto' }} onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+        <div className="serif" style={{ fontSize: 20, fontWeight: 500, marginBottom: 6 }}>{insight.title}</div>
+        <p className="muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{insight.text}</p>
+        <div style={{ marginTop: 16, padding: 16, background: 'var(--bg-tint)', borderRadius: 12 }}>
+          <div className="mono tiny muted" style={{ marginBottom: 10 }}>INVOLVED ATOMS</div>
+          <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+            {involved.map(a => {
+              const author = users.find(u => u.id === a.authorId);
+              return (
+                <li key={a.id}>
+                  {a.kind === 'human' && author && <span style={{ color: author.colorVar, marginRight: 4 }}>●</span>}
+                  {a.text} <span className="tiny muted">— {author ? author.name : a.kind}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.InsightModal = InsightModal;
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== tweaks-panel.jsx =====
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <div className="twk-root">
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <div className="twk-section-root">
+      <div className="twk-sect">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// ===== app.jsx =====
+var { useState, useEffect, useRef, useMemo, useCallback, Fragment } = React;
+
+// ===== App — orchestrates screens and global state =====
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "showColors": true,
+  "atomDensity": "medium",
+  "aiVisibility": "all",
+  "showHalos": true,
+  "showHumanFont": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const D = window.AppData;
+
+  const [level, setLevel] = useState('lobby'); // lobby | domain
+  const [domain, setDomain] = useState(D.domains[0]);
+  const [onboardOpen, setOnboardOpen] = useState(true);
+
+  // modals
+  const [atomizeOpen, setAtomizeOpen] = useState(false);
+  const [atomizeText, setAtomizeText] = useState('');
+  const [dashOpen, setDashOpen] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const [collabOpen, setCollabOpen] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(null);
+
+  // canvas filters
+  const [filters, setFilters] = useState({
+    hideHuman: false, hideLit: false, hideAi: false,
+    hideColors: false,
+    hideEdges: { support: false, challenge: false, refine: false, question: false, cite: false },
+  });
+  const onFilterChange = (key, val) => setFilters(f => ({ ...f, [key]: val }));
+
+  const you = D.users.find(u => u.isYou);
+
+  // tweaks
+  const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
+
+  // Apply tweaks to filters where applicable
+  useEffect(() => {
+    setFilters(f => ({
+      ...f,
+      hideColors: !tweaks.showColors,
+      hideAi: tweaks.aiVisibility === 'hide',
+    }));
+  }, [tweaks.showColors, tweaks.aiVisibility]);
+
+  // Breadcrumb
+  const breadcrumbs = useMemo(() => {
+    const out = [{ id: 'lobby', label: 'Lobby' }];
+    if (level === 'domain') out.push({ id: domain.id, label: domain.title });
+    return out;
+  }, [level, domain]);
+
+  const goLobby = () => setLevel('lobby');
+  const goDomain = (d) => { if (d) setDomain(d); setLevel('domain'); };
+
+  const onCrumbClick = (c, i) => {
+    if (i === 0) goLobby();
+  };
+
+  return (
+    <div>
+      <Onboarding open={onboardOpen} onClose={() => setOnboardOpen(false)} />
+
+      <TopNav
+        level={level}
+        breadcrumbs={breadcrumbs}
+        onCrumbClick={onCrumbClick}
+        you={you}
+        notify
+        onOpenDashboard={() => setDashOpen(true)}
+        onOpenCollab={() => setCollabOpen(true)}
+        onOpenProposal={() => setProposalOpen(true)}
+      />
+
+      {level === 'lobby' && (
+        <DomainLobby
+          domains={D.domains}
+          you={you}
+          onPickDomain={(d) => goDomain(d)}
+        />
+      )}
+
+      {level === 'domain' && (
+        <DomainCanvas
+          domain={domain}
+          topics={D.topics}
+          subtopics={D.subtopics}
+          atoms={D.atoms}
+          reactions={D.reactions}
+          users={D.users}
+          summary={D.summary}
+          insights={D.insights}
+          bridges={D.bridges}
+          floaters={D.floaters}
+          clusterSuggestions={D.clusterSuggestions}
+          filters={filters}
+          onFilterChange={onFilterChange}
+          onOpenAtomization={(t) => { setAtomizeText(t || ''); setAtomizeOpen(true); }}
+          onOpenProposal={() => setProposalOpen(true)}
+          onOpenInsight={(ins) => setInsightOpen(ins)}
+          tweaks={tweaks}
+        />
+      )}
+
+      <AtomizationPreview
+        open={atomizeOpen}
+        you={you}
+        originalText={atomizeText}
+        onClose={() => setAtomizeOpen(false)}
+        onConfirm={() => { setAtomizeOpen(false); }}
+      />
+
+      <Dashboard open={dashOpen} you={you} dashboard={D.dashboard} users={D.users} onClose={() => setDashOpen(false)} />
+      <Proposal open={proposalOpen} proposal={D.proposal} onClose={() => setProposalOpen(false)} />
+      <Collaborators open={collabOpen} users={D.users} you={you} onClose={() => setCollabOpen(false)} />
+      <InsightModal insight={insightOpen} atoms={D.atoms} users={D.users} onClose={() => setInsightOpen(null)} />
+
+      {/* Tweaks panel */}
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection label="Display">
+            <window.TweakToggle label="Color-code by user" value={tweaks.showColors} onChange={(v) => setTweak('showColors', v)} />
+            <window.TweakToggle label="Show cluster halos" value={tweaks.showHalos} onChange={(v) => setTweak('showHalos', v)} />
+            <window.TweakToggle label="Handwritten font for human atoms" value={tweaks.showHumanFont} onChange={(v) => setTweak('showHumanFont', v)} />
+          </window.TweakSection>
+          <window.TweakSection label="AI atoms">
+            <window.TweakRadio
+              label="Visibility"
+              value={tweaks.aiVisibility}
+              options={[{ value: 'all', label: 'All' }, { value: 'connect', label: 'Only connectors' }, { value: 'hide', label: 'Hide' }]}
+              onChange={(v) => setTweak('aiVisibility', v)}
+            />
+          </window.TweakSection>
+          <window.TweakSection label="Density">
+            <window.TweakRadio
+              label="Cluster"
+              value={tweaks.atomDensity}
+              options={[{ value: 'loose', label: 'Loose' }, { value: 'medium', label: 'Medium' }, { value: 'tight', label: 'Tight' }]}
+              onChange={(v) => setTweak('atomDensity', v)}
+            />
+          </window.TweakSection>
+          <window.TweakSection label="Quick navigation">
+            <window.TweakButton label="Open onboarding again" onClick={() => setOnboardOpen(true)} />
+            <window.TweakButton label="Show atomization preview" onClick={() => { setAtomizeOpen(true); }} />
+            <window.TweakButton label="Show proposal generator" onClick={() => setProposalOpen(true)} />
+            <window.TweakButton label="Show personal dashboard" onClick={() => setDashOpen(true)} />
+            <window.TweakButton label="Show collaborator finder" onClick={() => setCollabOpen(true)} />
+          </window.TweakSection>
+        </window.TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
