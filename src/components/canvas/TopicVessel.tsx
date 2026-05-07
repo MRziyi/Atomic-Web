@@ -9,10 +9,19 @@
 import { cn } from "@/lib/cn";
 import type { Topic } from "@/lib/types";
 
-export function TopicVessel({ topic }: { topic: Topic }) {
+export function TopicVessel({
+  topic,
+  dimmed,
+}: {
+  topic: Topic;
+  dimmed?: boolean;
+}) {
   return (
     <div
-      className="pointer-events-none absolute"
+      className={cn(
+        "pointer-events-none absolute transition-opacity duration-300",
+        dimmed && "opacity-25",
+      )}
       style={{
         left: topic.x,
         top: topic.y,

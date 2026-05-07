@@ -362,6 +362,7 @@ function ExpandedShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const insightsOpen = useCanvas((s) => s.insightsOpen);
   return (
     <AnimatePresence>
       <motion.div
@@ -370,12 +371,18 @@ function ExpandedShell({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
-        className="fixed inset-0 z-30 bg-paper/40"
+        className={cn(
+          "fixed inset-0 z-30 bg-paper/40 transition-[padding] duration-300",
+          insightsOpen && "pr-[320px]",
+        )}
         onClick={onClose}
       />
       <div
         key="centerer"
-        className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center px-10 py-16"
+        className={cn(
+          "pointer-events-none fixed inset-0 z-40 flex items-center justify-center px-10 py-16 transition-[padding] duration-300",
+          insightsOpen && "pr-[calc(320px+2.5rem)]",
+        )}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.6 }}

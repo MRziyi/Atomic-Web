@@ -129,3 +129,59 @@ The frontend currently runs end-to-end **without** the backend — every endpoin
 See [`docs/integration.md`](docs/integration.md) for env, ports, auth/CORS, and the smoke test against the real backend.
 
 If you build a new feature before its endpoint exists, mock the response inside `src/lib/api/<area>.ts` with a `// MOCK:` comment that names the endpoint and Design section. Grep for `// MOCK:` before opening a PR — none should reach `main` outside an explicit dev flag.
+
+## 10. Open frontend TODOs (after the all-surfaces drop)
+
+Snapshot taken at commit `6d3bf50`. Items here are independent of backend integration — they can be picked up in any order. Update / strike through when you finish one.
+
+### P0 — done
+
+All six P0 items shipped together. Visual smoke walked Lobby → Workshop overview → SubtopicExpanded → InsightsDrawer (overlap fixed) → Tour (focal area bright) → StreamingDock (canned voice script visibly retracts the first candidate, real `getUserMedia` permission prompt fires) in Chrome via DevTools MCP.
+
+| # | What landed | Where |
+|---|---|---|
+| 1 | Real `getUserMedia` + `MediaRecorder('audio/webm;codecs=opus', {timeslice:500})` with `unknown / requesting / granted / denied / unavailable` permission states; mic icon flips to `MicOff` when denied. Audio chunks are dropped today; once the backend ships `/ws/stream/{id}` they go binary. | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) |
+| 2 | Atom flies from the dock candidate's screen rect to the target subtopic's screen rect — captured via `data-subtopic-id` / `data-candidate-id` queries, animated by a `position: fixed` flight layer over 600 ms `cubic-bezier(0.4, 0, 0.2, 1)`. | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) + `data-subtopic-id` on the bubble wrapper in [src/components/canvas/WorkshopCanvas.tsx](src/components/canvas/WorkshopCanvas.tsx) |
+| 3 | Canned voice script now emerges → retracts → re-emerges to demo self-correction; `atom_retracted` removes the candidate before it lands. | [src/lib/api/mock-stream.ts](src/lib/api/mock-stream.ts) `VOICE_SCRIPT` |
+| 4 | `ExpandedShell` reads `useCanvas.insightsOpen` and applies `pr-[calc(320px+2.5rem)]` so the 1100 × 680 card centers in the visible canvas with the drawer open (HANDOFF §8 bug #1 doesn't recur). | [src/components/canvas/SubtopicExpanded.tsx](src/components/canvas/SubtopicExpanded.tsx) |
+| 5 | Added a `question` edge in s-self-explain so all 5 reaction kinds (support / challenge zigzag / build-on / question / cite) render together when that subtopic is expanded. | [src/lib/api/fixtures.ts](src/lib/api/fixtures.ts) `W_TUTORING_REACTIONS` |
+| 6 | Removed the full-screen `bg-paper/55` mask. Tour dim is now per-element: `TopicVessel` accepts a `dimmed` prop, `WorkshopCanvas` derives focal vs non-focal topic / subtopic / floater from `useCanvas.tourFocusId`. Focus area stays at full opacity. | [src/components/tour/OnboardingTour.tsx](src/components/tour/OnboardingTour.tsx) + [src/components/canvas/TopicVessel.tsx](src/components/canvas/TopicVessel.tsx) + [src/components/canvas/WorkshopCanvas.tsx](src/components/canvas/WorkshopCanvas.tsx) |
+
+### P1 — required for a credible user study
+
+| # | Item | Where |
+|---|---|---|
+| 7 | AI-assist popover on selected atom | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) `AI` button | Surfaces existing connections only — invariant I1 ("never authors atoms"). |
+| 8 | Right-click reaction menu on AtomNode | [src/components/canvas/AtomNode.tsx](src/components/canvas/AtomNode.tsx) | §C.5 "Add support / challenge / build-on / question / cite to another atom". |
+| 9 | Drag atom in the overview canvas | WorkshopCanvas | Today drag only works inside the expanded view; overview drag should call `POST /atoms/{id}/move` (mock today). |
+| 10 | Crystallize visual transition | WorkshopCanvas haloHints + new component | §D.4 calls for a 1500 ms ease-out where floaters converge and a bubble forms. Today the button just calls a mutation. |
+| 11 | Persist auth across reloads | [src/lib/stores/auth.ts](src/lib/stores/auth.ts) | Wrap with `zustand/middleware` `persist` so refresh keeps the session. |
+| 12 | Route guards | layout / middleware | Today `/workshop/[id]` works without login because the mock seeds Sarah. Add a guard for the real OAuth flow. |
+| 13 | Insights "jump →" pans + zooms before expanding | [src/components/insights/InsightsDrawer.tsx](src/components/insights/InsightsDrawer.tsx) | Currently jumps straight to expand; should fly the camera first. |
+| 14 | Tour first-time auto-prompt + 30 s idle prompt | [src/components/tour/OnboardingTour.tsx](src/components/tour/OnboardingTour.tsx) | §C.7 — non-modal "Want me to guide you?" on first entry. |
+| 15 | Empty-state for non-fixture workshops | [src/lib/api/hooks.ts](src/lib/api/hooks.ts) `useWorkshopOverview` stub | w-trust / w-multimodal / w-policy currently render empty canvas. Show a real "this workshop doesn't have data yet" placeholder. |
+
+### P2 — polish
+
+| # | Item |
+|---|---|
+| 16 | Filter dropdown (hide AI / hide colors / hide reaction kinds) — currently the button is disabled. |
+| 17 | "Play diff" since-last-visit animation (§B.2). |
+| 18 | Drill-down on dashboard metrics ("+8 cited yours" → list of citing atoms). |
+| 19 | Stretch-collaborator "Connect" button is currently no-op. |
+| 20 | Floater dot at 14×14 reads as too small at typical zoom; bump to 18–20 px. |
+| 21 | CrystallizeHalo positions at floater bbox; geometric centroid would feel more centered. |
+| 22 | Login manual-fields validation (empty name still proceeds). |
+| 23 | Toast feedback on no-op buttons (Notify co-authors, Compose proposal in mocked context). |
+
+### Code hygiene / infra
+
+| # | Item |
+|---|---|
+| 24 | Update [docs/contracts/domain-types.md](docs/contracts/domain-types.md) to mirror new types in [src/lib/types.ts](src/lib/types.ts) (`WorkshopCard / WorkshopOverview / SubtopicDetail / InsightsBundle / DashboardBundle / ProposalDraft / ProposalSection`) and ping the backend repo. **Do this before backend cutover** — drift is costly to debug later. |
+| 25 | Test suite — Vitest + RTL on AtomNode / ReactionEdge zigzag math / MockStreamSession state machine. |
+| 26 | Root-level `error.tsx` so a runtime exception inside the canvas doesn't blank the page. |
+| 27 | `loading.tsx` per route + `not-found.tsx`. |
+| 28 | Replace the default Next.js `N` favicon. |
+| 29 | Add `useShallow` (or equivalent) helper to prevent the next agent from repeating the `Object.values` infinite-loop trap (see §5 architectural notes). |
+| 30 | A11y pass — keyboard nav on subtopic bubbles, mic button SR-friendly state announcements, `aria-pressed` on Insights toggle. |

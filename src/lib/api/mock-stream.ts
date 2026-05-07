@@ -28,20 +28,32 @@ const VOICE_SCRIPT: Array<
     text: "Translated scaffolding loses metacognitive cues",
     subtopic: "s-language",
     topic: "t-equity",
-    confidence: 0.86,
+    confidence: 0.62,
+    delay: 200,
+  },
+  // Self-correction window (Design §D.1, 200ms hold). The user backtracks
+  // before this candidate lands, so the dock retracts it instead of flying.
+  { kind: "tx", text: "actually—not quite, I meant", delay: 500 },
+  { kind: "retract", delay: 100 },
+  { kind: "tx", text: "warmth markers feel transactional in Korean", delay: 500 },
+  {
+    kind: "emerge",
+    text: "Warmth markers feel transactional in Korean tutors",
+    subtopic: "s-language",
+    topic: "t-equity",
+    confidence: 0.88,
     delay: 200,
   },
   { kind: "land", delay: 800 },
-  { kind: "tx", text: "actually—not quite, I meant the warmth markers", delay: 500 },
+  { kind: "tx", text: "and Mandarin learners get fewer self-explanation prompts", delay: 500 },
   {
     kind: "emerge",
-    text: "Warmth markers translate awkwardly across languages",
+    text: "Mandarin learners receive fewer self-explanation prompts",
     subtopic: "s-language",
     topic: "t-equity",
-    confidence: 0.78,
-    delay: 600,
+    confidence: 0.84,
+    delay: 200,
   },
-  { kind: "tx", text: "warmth markers feel transactional in Korean", delay: 500 },
   { kind: "land", delay: 800 },
 ];
 

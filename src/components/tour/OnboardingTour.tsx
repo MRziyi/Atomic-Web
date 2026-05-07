@@ -71,15 +71,8 @@ export function OnboardingTour() {
 
   return (
     <>
-      {/* Dim mask — paper-tinted, not pure black */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="pointer-events-none fixed inset-0 z-20 bg-paper/55"
-      />
-
+      {/* Per-element dimming is handled in WorkshopCanvas via `dimmed` props.
+          Keeping the focal area visible was Design §C.7 — no full-screen mask. */}
       <AnimatePresence mode="wait">
         <motion.aside
           key={stop.stop_id}

@@ -267,9 +267,20 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           style={{ willChange: "transform" }}
         >
           {/* Topic vessels — visual chrome only */}
-          {overview.topics.map((topic) => (
-            <TopicVessel key={topic.id} topic={topic} />
-          ))}
+          {overview.topics.map((topic) => {
+            // A topic is in-focus when the tour points at it directly OR at one
+            // of its subtopics; everything else dims.
+            const focusedSubtopicTopicId = overview.topics
+              .flatMap((t) => t.subtopics)
+              .find((s) => s.id === tourFocusId)?.topic_id;
+            const topicDimmed =
+              tourActive &&
+              tourFocusId !== topic.id &&
+              focusedSubtopicTopicId !== topic.id;
+            return (
+              <TopicVessel key={topic.id} topic={topic} dimmed={topicDimmed} />
+            );
+          })}
 
           {/* Subtopic bubbles — workshop-absolute coords */}
           {overview.topics.flatMap((topic) =>
@@ -282,6 +293,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 <div
                   key={s.id}
                   data-canvas-child
+                  data-subtopic-id={s.id}
                   className="absolute"
                   style={{
                     left: s.x - SUBTOPIC_W / 2,

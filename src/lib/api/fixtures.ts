@@ -557,6 +557,18 @@ export const W_TUTORING_REACTIONS: Reaction[] = [
     status: "accepted",
     created_at: "2026-05-01T11:30:00Z",
   },
+  // Question — does the wait-time finding generalize to group settings?
+  {
+    id: "r4q",
+    kind: "question",
+    from_atom_id: "a5",
+    to_atom_id: "a2",
+    origin: "human",
+    created_by: TOM.id,
+    status: "accepted",
+    ai_rationale: undefined,
+    created_at: "2026-05-01T12:00:00Z",
+  },
   // s-monitoring
   {
     id: "r5",
