@@ -41,32 +41,21 @@ If you find yourself adding a button or hook whose handler would result in an at
 
 Same constraint also lives on the backend (it rejects `POST /atoms/` with `kind='ai'`), but defense-in-depth: don't rely on that — design the UI so the affordance doesn't exist.
 
-## 5. Build order (P0 → P2)
+## 5. Build status — all P0–P2 surfaces wired (mocked backend)
 
-The demo's `docs/scaffold-demo/Atomic Ideation.html` is reference for visual feel only. **Do NOT port code** — start fresh with the new structure.
+Every surface in §C.0–§C.9 + §B.3 + §D.4 is implemented and rendering against [`src/lib/api/fixtures.ts`](src/lib/api/fixtures.ts) + [`src/lib/api/mock-stream.ts`](src/lib/api/mock-stream.ts). `pnpm typecheck`, `pnpm lint`, `pnpm build` are clean.
 
-### P0 — core demo narrative
+For the per-surface file map, see [`CLAUDE.md`](CLAUDE.md) §5.
 
-1. `StreamingDock` + WebSocket integration (Design §C.6 + §D.1) — innovation C.1.
-2. `AtomNode` + `ReactionEdge` SVG primitives (Design §C.5). Render all 3 atom kinds + 5 reaction kinds + AI ghost key.
-3. `SubtopicBubble` with hover tooltip + click-to-expand pop animation (Design §C.3 + §C.4 + §D.2).
-4. `OnboardingTour` overlay with at least one canned tour stop (Design §C.7 + §D.5) — innovation C.3.
-5. `WorkshopCanvas` page under `app/workshop/[id]/page.tsx` — pulls everything together at overview-level zoom.
+When the backend ships, the cutover is mechanical:
 
-### P1 — user journey support
+1. Replace each `delay(...)` in [`src/lib/api/hooks.ts`](src/lib/api/hooks.ts) with the real `api.get/post(...)` from [`src/lib/api/client.ts`](src/lib/api/client.ts).
+2. Swap `MockStreamSession` in [`src/lib/api/mock-stream.ts`](src/lib/api/mock-stream.ts) for a real `WebSocket`. The event union already matches `StreamEvent`.
+3. Wire real `getUserMedia + MediaRecorder` in `StreamingDock` — currently the mic press triggers a canned voice script.
+4. Replace the `/login` mock with `POST /auth/google/start → window.location.href = auth_url`.
+5. Grep `// MOCK:` and clean up.
 
-6. Lobby `app/page.tsx` (Design §C.1) — two-column hero with `WorkshopCard`.
-7. Profile boot `app/login/page.tsx` (Design §C.0) — Google OAuth stub + manual fallback.
-8. AI Insights drawer (Design §C.8) — collapsed by default.
-9. Crystallization halo + button on floater clusters (Design §D.4).
-
-### P2 — polish
-
-10. Personal Dashboard overlay (Design §C.9).
-11. Proposal generation overlay (Design §B.3).
-12. Collaborator discovery overlay (Design §C.9).
-
-After each phase, take a screenshot and check against the relevant Design §C / §D acceptance criteria.
+After each new feature, take a screenshot and check against the relevant Design §C / §D acceptance criteria.
 
 ## 6. Working principles (carry-overs from prior agents)
 

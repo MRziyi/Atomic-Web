@@ -21,11 +21,14 @@ export type CanvasState = {
   // Tour mode (Design_v1.md §C.7) — when active, dim non-focus areas
   tourActive: boolean;
   tourFocusId: string | null;
+  // §C.8 — collapsed by default (invariant I7)
+  insightsOpen: boolean;
 
   setCamera: (c: Partial<CameraState>) => void;
   expandSubtopic: (id: string | null) => void;
   selectAtom: (id: string | null) => void;
   setTour: (active: boolean, focusId?: string | null) => void;
+  toggleInsights: (open?: boolean) => void;
 };
 
 export const useCanvas = create<CanvasState>((set) => ({
@@ -34,10 +37,33 @@ export const useCanvas = create<CanvasState>((set) => ({
   selectedAtomId: null,
   tourActive: false,
   tourFocusId: null,
+  insightsOpen: false,
 
-  setCamera: (c) => set((s) => ({ camera: { ...s.camera, ...c } })),
-  expandSubtopic: (id) => set({ expandedSubtopicId: id }),
-  selectAtom: (id) => set({ selectedAtomId: id }),
+  setCamera: (c) =>
+    set((s) => {
+      const next = { ...s.camera, ...c };
+      if (
+        next.x === s.camera.x &&
+        next.y === s.camera.y &&
+        next.zoom === s.camera.zoom
+      ) {
+        return s;
+      }
+      return { camera: next };
+    }),
+  expandSubtopic: (id) =>
+    set((s) => (s.expandedSubtopicId === id ? s : { expandedSubtopicId: id })),
+  selectAtom: (id) =>
+    set((s) => (s.selectedAtomId === id ? s : { selectedAtomId: id })),
   setTour: (active, focusId = null) =>
-    set({ tourActive: active, tourFocusId: focusId }),
+    set((s) =>
+      s.tourActive === active && s.tourFocusId === focusId
+        ? s
+        : { tourActive: active, tourFocusId: focusId },
+    ),
+  toggleInsights: (open) =>
+    set((s) => {
+      const next = open ?? !s.insightsOpen;
+      return next === s.insightsOpen ? s : { insightsOpen: next };
+    }),
 }));

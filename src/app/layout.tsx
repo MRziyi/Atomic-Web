@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Newsreader, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/providers";
 
 // Font setup — see Design_v1.md §E.1
 const inter = Inter({
@@ -45,7 +46,9 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
     >
-      <body className="bg-paper text-ink antialiased font-sans">{children}</body>
+      <body className="bg-paper text-ink antialiased font-sans">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

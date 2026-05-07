@@ -16,10 +16,12 @@ export class ApiError extends Error {
   }
 }
 
+type JsonInit = Omit<RequestInit, "body"> & { body?: unknown };
+
 async function request<T>(
   method: string,
   path: string,
-  init: RequestInit & { body?: unknown } = {},
+  init: JsonInit = {},
 ): Promise<T> {
   const { body, headers, ...rest } = init;
   const res = await fetch(`${API_BASE}/api/v1${path}`, {

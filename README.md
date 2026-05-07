@@ -75,13 +75,36 @@ docs/
 - [`docs/contracts/wire-contract.md`](docs/contracts/wire-contract.md) — backend contract
 - [`docs/integration.md`](docs/integration.md) — operational guide for talking to the backend
 
-## What's done in this scaffold
+## What's done
 
-Only the skeleton:
-- Project boots, displays Lobby placeholder
-- Design tokens (colors, fonts, animations) wired via Tailwind
-- Type contracts in `src/lib/types.ts`
-- Zustand stores stubbed
-- API/WebSocket client harness
+All 12 surfaces (Design §C.0–§C.9 + §B.3 proposal + §D.4 crystallize) are wired against a fully mocked backend. Each route renders, transitions through its state machine, and respects the visual non-negotiables in [`CLAUDE.md`](CLAUDE.md) §4.
 
-Everything beyond the placeholders is **explicitly left for Claude Code** — see [`CLAUDE.md`](CLAUDE.md) §5 (build order).
+| Route / surface | Source | Spec |
+|---|---|---|
+| `/` Lobby | [`src/app/page.tsx`](src/app/page.tsx), [`src/components/lobby/WorkshopCard.tsx`](src/components/lobby/WorkshopCard.tsx) | §C.1 |
+| `/login` Profile boot | [`src/app/login/page.tsx`](src/app/login/page.tsx) | §C.0 |
+| `/workshop/[id]` Canvas | [`src/components/canvas/WorkshopCanvas.tsx`](src/components/canvas/WorkshopCanvas.tsx) | §C.2 |
+| `SubtopicBubble` (hand-drawn ellipse + 250ms tooltip) | [`src/components/canvas/SubtopicBubble.tsx`](src/components/canvas/SubtopicBubble.tsx) | §C.3, §D.2 |
+| `SubtopicExpanded` (1100×680 inline pop) | [`src/components/canvas/SubtopicExpanded.tsx`](src/components/canvas/SubtopicExpanded.tsx) | §C.4, §D.2 |
+| `AtomNode` + `ReactionEdge` (5 edges incl. Challenge zigzag amp 6px) | [`src/components/canvas/AtomNode.tsx`](src/components/canvas/AtomNode.tsx), [`src/components/canvas/ReactionEdge.tsx`](src/components/canvas/ReactionEdge.tsx) | §C.5, §D.3 |
+| `StreamingDock` (live ribbon, waveform, fly choreography) | [`src/components/dock/StreamingDock.tsx`](src/components/dock/StreamingDock.tsx) | §C.6, §D.1 |
+| `OnboardingTour` (profile-driven canned stops) | [`src/components/tour/OnboardingTour.tsx`](src/components/tour/OnboardingTour.tsx) | §C.7, §D.5 |
+| `InsightsDrawer` (default-collapsed, 4 sections, actionable links) | [`src/components/insights/InsightsDrawer.tsx`](src/components/insights/InsightsDrawer.tsx) | §C.8, invariant I7 |
+| `CrystallizeHalo` (dashed halo + button) | [`src/components/canvas/CrystallizeHalo.tsx`](src/components/canvas/CrystallizeHalo.tsx) | §D.4 |
+| `/dashboard` Personal | [`src/app/dashboard/page.tsx`](src/app/dashboard/page.tsx) | §C.9 |
+| `/proposal/[id]` Proposal draft | [`src/app/proposal/[id]/page.tsx`](src/app/proposal/[id]/page.tsx) | §B.3 |
+
+`pnpm typecheck`, `pnpm lint`, and `pnpm build` are clean.
+
+## Mock layer
+
+The backend is being built in parallel. Until it ships, all REST and WebSocket calls resolve from local fixtures:
+
+- [`src/lib/api/fixtures.ts`](src/lib/api/fixtures.ts) — canonical fixture data (one user "Sarah", one detailed workshop "Adaptive Tutoring Systems", insights, dashboard, proposal)
+- [`src/lib/api/hooks.ts`](src/lib/api/hooks.ts) — TanStack Query wrappers; each hook resolves a fixture after a small artificial delay
+- [`src/lib/api/mock-stream.ts`](src/lib/api/mock-stream.ts) — replaces `WebSocket /ws/stream/{id}` with a `MockStreamSession` that emits `transcribing → atom_emerging → atom_retracted → atom_landed` on the same shape
+
+Cutover plan when the backend lands:
+1. Replace each `delay(...)` call in [`src/lib/api/hooks.ts`](src/lib/api/hooks.ts) with `api.get/post(...)` from [`src/lib/api/client.ts`](src/lib/api/client.ts).
+2. Swap `MockStreamSession` for a real `WebSocket` (same `on/sendText/stop` surface).
+3. Remove `// MOCK:` comments and grep before opening the PR.

@@ -200,12 +200,14 @@ export type StreamEvent =
       target_topic_id: string | null;
       confidence: number;
     }
+  | { type: "atom_retracted"; candidate_id: string }
   | {
       type: "atom_landed";
       candidate_id: string;
       atom: HumanAtom;
     }
-  | { type: "stream_end" };
+  | { type: "stream_end" }
+  | { type: "error"; code: string; message: string };
 
 // ============================================================
 // AI Tour event (Design_v1.md §C.7 + §D.5)
@@ -231,4 +233,131 @@ export interface TourSession {
   current_stop: TourStop | null;
   history: TourStop[];
   status: "active" | "completed" | "exited";
+}
+
+// ============================================================
+// Workshop overview payload (Design_v1.md §C.2)
+// ============================================================
+
+export interface WorkshopCard extends Workshop {
+  recommendation_reason?: {
+    kind: "recommended" | "active_now" | "stretch_you";
+    explanation: string;
+  };
+  contributor_colors: User["color_token"][];
+}
+
+export interface WorkshopOverview {
+  workshop: Workshop;
+  topics: Array<Topic & { subtopics: Subtopic[] }>;
+  floaters: Atom[];
+  reactions: Reaction[];
+}
+
+export interface SubtopicDetail {
+  subtopic: Subtopic;
+  atoms: Atom[];
+  reactions: Reaction[];
+  cluster_hints: Array<{
+    id: string;
+    floater_atom_ids: string[];
+    suggested_title: string;
+  }>;
+}
+
+// ============================================================
+// AI Insights drawer payload (Design_v1.md §C.8)
+// ============================================================
+
+export interface InsightsBundle {
+  tensions: Array<{
+    id: string;
+    subtopic_id: string;
+    label: string;
+    summary: string;
+  }>;
+  convergence_candidates: Array<{
+    id: string;
+    topic_id: string;
+    floater_atom_ids: string[];
+    suggested_title: string;
+  }>;
+  edge_potential: Reaction[]; // top 5 ghost keys
+  since_last_visit: {
+    new_atoms: number;
+    new_reactions: number;
+    new_subtopics: number;
+  } | null;
+}
+
+// ============================================================
+// Personal dashboard (Design_v1.md §C.9)
+// ============================================================
+
+export interface DashboardBundle {
+  atoms_by_workshop: Array<{
+    workshop_id: string;
+    workshop_title: string;
+    atom_count: number;
+    recent_atoms: Array<{
+      atom_id: string;
+      text: string;
+      reactions: { kind: ReactionKind; count: number }[];
+    }>;
+  }>;
+  reach: {
+    cited_count: number;
+    built_on_count: number;
+    proposed_connections: number;
+  };
+  collaborators_with_you: Array<{
+    user_id: string;
+    name: string;
+    affiliation: string;
+    cross_builds: number;
+    color_token: User["color_token"];
+  }>;
+  collaborators_stretch_you: Array<{
+    user_id: string;
+    name: string;
+    affiliation: string;
+    discipline: string;
+    color_token: User["color_token"];
+    stretch_distance: number; // 1..5
+  }>;
+  proposals: Array<{
+    id: string;
+    title: string;
+    contributor_count: number;
+    maturity: number;
+  }>;
+}
+
+// ============================================================
+// Proposal draft (Design_v1.md §B.3)
+// ============================================================
+
+export interface ProposalSection {
+  id: string;
+  heading: string;
+  text: string;
+  provenance: {
+    human_pct: number;
+    lit_pct: number;
+    ai_pct: number;
+    atom_count: number;
+  };
+}
+
+export interface ProposalDraft {
+  id: string;
+  subtopic_id: string;
+  title: string;
+  sections: ProposalSection[];
+  contributors: Array<{
+    user_id: string;
+    name: string;
+    color_token: User["color_token"];
+  }>;
+  maturity: number;
 }

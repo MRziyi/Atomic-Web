@@ -46,30 +46,48 @@ These are user-stated preferences from two design rounds. Violating them is a re
 | **Floater atoms have subtle brownian motion (1-2px amplitude).** | Design §C.2 — keeps canvas alive |
 | **Challenge edges use sharp red zigzag (amplitude 6px).** User explicitly loves this. | Design §C.5 |
 
-## 5. Build order (P0 → P2)
+## 5. Build status — all P0–P2 surfaces wired (mocked backend)
 
-The demo's `docs/scaffold-demo/Atomic Ideation.html` is reference for visual feel only. **Do NOT port code** — start fresh with the new structure.
+All 12 surfaces below are implemented against [`src/lib/api/fixtures.ts`](src/lib/api/fixtures.ts) + [`src/lib/api/mock-stream.ts`](src/lib/api/mock-stream.ts). The demo's [`docs/scaffold-demo/Atomic Ideation.html`](docs/scaffold-demo/Atomic Ideation.html) was reference only — no code was ported.
 
-### P0 — core demo narrative
+| # | Surface | File | Spec |
+|---|---|---|---|
+| 1 | `StreamingDock` (innovation C.1) | [`src/components/dock/StreamingDock.tsx`](src/components/dock/StreamingDock.tsx) | §C.6 + §D.1 |
+| 2 | `AtomNode` + `ReactionEdge` (3 atom kinds, 5 edges, ghost key) | [`src/components/canvas/AtomNode.tsx`](src/components/canvas/AtomNode.tsx), [`src/components/canvas/ReactionEdge.tsx`](src/components/canvas/ReactionEdge.tsx) | §C.5 + §D.3 |
+| 3 | `SubtopicBubble` (hand-drawn ellipse, 250ms hover) | [`src/components/canvas/SubtopicBubble.tsx`](src/components/canvas/SubtopicBubble.tsx) | §C.3 + §D.2 |
+| 4 | `OnboardingTour` (innovation C.3) | [`src/components/tour/OnboardingTour.tsx`](src/components/tour/OnboardingTour.tsx) | §C.7 + §D.5 |
+| 5 | `WorkshopCanvas` overview page | [`src/components/canvas/WorkshopCanvas.tsx`](src/components/canvas/WorkshopCanvas.tsx), [`src/app/workshop/[id]/page.tsx`](src/app/workshop/[id]/page.tsx) | §C.2 |
+| 6 | Lobby with `WorkshopCard` | [`src/app/page.tsx`](src/app/page.tsx), [`src/components/lobby/WorkshopCard.tsx`](src/components/lobby/WorkshopCard.tsx) | §C.1 |
+| 7 | Profile boot / login | [`src/app/login/page.tsx`](src/app/login/page.tsx) | §C.0 |
+| 8 | AI Insights drawer (collapsed by default — invariant I7) | [`src/components/insights/InsightsDrawer.tsx`](src/components/insights/InsightsDrawer.tsx) | §C.8 |
+| 9 | `CrystallizeHalo` | [`src/components/canvas/CrystallizeHalo.tsx`](src/components/canvas/CrystallizeHalo.tsx) | §D.4 |
+| 10 | Personal Dashboard (4 quadrants) | [`src/app/dashboard/page.tsx`](src/app/dashboard/page.tsx) | §C.9 |
+| 11 | Proposal draft view (provenance chips) | [`src/app/proposal/[id]/page.tsx`](src/app/proposal/[id]/page.tsx) | §B.3 |
+| 12 | Collaborator surfaces (folded into Dashboard quadrants) | [`src/app/dashboard/page.tsx`](src/app/dashboard/page.tsx) | §C.9 |
 
-1. **`StreamingDock` component** + WebSocket integration (Design §C.6 + §D.1). Innovation C.1; must exist before anything else makes sense.
-2. **`AtomNode` + `ReactionEdge` SVG primitives** (Design §C.5). Render all 3 atom kinds + 5 reaction kinds + AI ghost key.
-3. **`SubtopicBubble`** with hover tooltip + click-to-expand pop animation (Design §C.3 + §C.4 + §D.2).
-4. **`OnboardingTour` overlay** with at least one canned tour stop (Design §C.7 + §D.5). Innovation C.3.
-5. **`WorkshopCanvas` page** under `app/workshop/[id]/page.tsx` — pulls everything together at overview-level zoom.
+### Cutover plan when the backend lands
 
-### P1 — user journey support
+1. Replace each `delay(...)` call in [`src/lib/api/hooks.ts`](src/lib/api/hooks.ts) with `api.get/post(...)` from [`src/lib/api/client.ts`](src/lib/api/client.ts).
+2. Swap `MockStreamSession` for a real `WebSocket` (same `on/sendText/stop` surface; events already match `StreamEvent`).
+3. Wire real `getUserMedia + MediaRecorder('audio/webm;codecs=opus', timeslice=500ms)` in `StreamingDock` — the mock currently triggers a canned voice script on `mousedown`.
+4. Replace the `/login` mock with `POST /auth/google/start → window.location.href = auth_url`.
+5. Grep `// MOCK:` before opening the PR — none should remain on `main` outside an explicit dev flag.
 
-6. Lobby `app/page.tsx` real implementation (Design §C.1) — two-column hero with `WorkshopCard`.
-7. Profile boot flow `app/login/page.tsx` (Design §C.0) — Google OAuth stub + manual fallback.
-8. AI Insights drawer (Design §C.8) — collapsed default.
-9. Crystallization halo + button on floater clusters (Design §D.4).
+### Local-default decisions (verify with the user)
 
-### P2 — polish
+These were resolved with sensible defaults while the backend is being built:
 
-10. Personal Dashboard overlay (Design §C.9).
-11. Proposal generation overlay (Design §B.3).
-12. Collaborator discovery overlay (Design §C.9).
+- **Atom self-correction.** `atom_retracted` is implemented; the canned voice script demonstrates one retract.
+- **Multi-workshop atoms.** Assumed 1:1 (matches `types.ts`).
+- **Atom-binding pairs.** Out of scope for now.
+- **Multi-edge between same atoms** (Challenge + Question on the same pair). Allowed; no client-side constraint.
+- **Floater layout.** Stable seeded random per atom id, with 1–2px brownian drift via `motion.button` `animate`.
+
+### Architectural notes worth knowing
+
+- **Coord system on the workshop canvas.** Topic vessels are pure visual chrome ([`src/components/canvas/TopicVessel.tsx`](src/components/canvas/TopicVessel.tsx)); subtopics and floaters are positioned at workshop-absolute coords as siblings, not as topic-local children. Don't nest interactive nodes inside `TopicVessel`.
+- **Framer Motion `animate` overrides Tailwind `transform`.** When centering an animated element, use a non-transform centering wrapper (grid / flex) and let Framer own the inner transform — Tailwind `-translate-*` will silently lose. See [`src/components/canvas/SubtopicExpanded.tsx`](src/components/canvas/SubtopicExpanded.tsx) `ExpandedShell`.
+- **Zustand actions must short-circuit no-op updates.** Every action in [`src/lib/stores/canvas.ts`](src/lib/stores/canvas.ts) compares before calling `set`. Without that, an effect that defensively calls `setTour(false)` each render produces an infinite loop in React 19. Same lesson for selectors that return `Object.values(...)` — subscribe to the dict ref, then `useMemo` outside.
 
 ## 6. Common pitfalls — do NOT do
 
@@ -106,6 +124,8 @@ pnpm build            # production build
 
 ## 9. Backend dependency
 
-Most surfaces require the backend (`atomic-ideation-backend`) to be running. See [`docs/integration.md`](docs/integration.md) for boot, env, mocking, and the auth/CORS contract.
+The frontend currently runs end-to-end **without** the backend — every endpoint is mocked from [`src/lib/api/fixtures.ts`](src/lib/api/fixtures.ts) and the streaming WS is mocked by [`src/lib/api/mock-stream.ts`](src/lib/api/mock-stream.ts). When `atomic-ideation-backend` ships, follow the cutover plan in §5.
 
-If the backend isn't ready for a feature you're building, mock the response inside `src/lib/api/<area>.ts` with a `// MOCK:` comment that names the endpoint and Design section. Replace with the real call when the backend ships. Grep for `// MOCK:` before opening a PR.
+See [`docs/integration.md`](docs/integration.md) for env, ports, auth/CORS, and the smoke test against the real backend.
+
+If you build a new feature before its endpoint exists, mock the response inside `src/lib/api/<area>.ts` with a `// MOCK:` comment that names the endpoint and Design section. Grep for `// MOCK:` before opening a PR — none should reach `main` outside an explicit dev flag.

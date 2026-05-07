@@ -39,16 +39,20 @@ Health check: `curl http://localhost:8000/health` → `{ "status": "ok", ... }`.
 
 ## 3. Running without a backend (mocked)
 
-When iterating on a frontend surface and the backend endpoint isn't ready:
+The frontend currently runs end-to-end without the backend. All routes load from local fixtures so you can do design / interaction iteration without booting the FastAPI side.
+
+- [`src/lib/api/fixtures.ts`](../src/lib/api/fixtures.ts) — canonical fixture data (one user "Sarah Park", one detailed workshop "Adaptive Tutoring Systems", insights bundle, dashboard, proposal draft, three canned tour stops).
+- [`src/lib/api/hooks.ts`](../src/lib/api/hooks.ts) — TanStack Query hooks. Each hook resolves a fixture after a small artificial delay (120–180ms) so loading states render.
+- [`src/lib/api/mock-stream.ts`](../src/lib/api/mock-stream.ts) — `MockStreamSession` replaces `WebSocket /ws/stream/{id}`. It emits a canned `transcribing → atom_emerging → atom_retracted → atom_landed → stream_end` script with honest timings (~500ms transcribing chunk, 200ms emerging hold, 600ms fly, 800ms landing pulse) so the choreography looks right.
+
+When you add a surface that needs an endpoint that doesn't exist yet:
 
 1. In `src/lib/api/<area>.ts`, add a `// MOCK:` comment and return canned data matching the shapes in [`docs/contracts/domain-types.md`](contracts/domain-types.md).
 2. Tag the mock with the design section and contract row, e.g.:
    ```ts
    // MOCK: GET /api/v1/workshops/?bucket=yours — Design §C.1, contract §1.2
    ```
-3. Replace with real call when the backend ships. Grep for `// MOCK:` before opening a PR; mocks should never reach `main` outside an explicitly opt-in dev flag.
-
-For WebSocket mocks: implement a fake `EventSource`-like emitter under `src/lib/api/__mocks__/` that yields the `StreamEvent` sequence from §D.1. Keep timings honest (200ms hold, 600ms fly) so the choreography looks right.
+3. Replace with the real call when the backend ships. Grep for `// MOCK:` before opening a PR; mocks should never reach `main` outside an explicitly opt-in dev flag.
 
 ## 4. Type generation (planned cutover)
 
