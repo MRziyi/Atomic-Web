@@ -8,9 +8,14 @@ Atomic Ideation is a multi-user research-ideation canvas. The frontend now ships
 
 - **In-place subtopic morph** (no modal). Same DOM element animates collapsed↔expanded.
 - **Squircle bubble** language with bubble-realistic surface (gradient, top-left highlight, multi-shadow). Topic vessels are watercolor / ink-wash rounded rectangles.
-- **Universal drag system** built on framer motion values + `instant=true` propagation during group drags (subtopic / topic / cluster) → no animation tween storms, no freezes.
-- **Proximity-detected clusters** that auto-form when 2+ floaters land within 240 px sharing the same `topic_id`. Click → Crystallize button creates a real Subtopic or Topic at runtime.
-- **Magnetic boundaries** — atoms / subtopics stick within sticky pad of their current container; pulled past it, they pop out.
+- **Universal drag system** built on framer motion values + `instant=true` propagation during group drags (subtopic / topic / cluster) + rAF-batched pan setStates → no tween storms, no synthetic-pointermove feedback loops, no freezes.
+- **Proximity-detected clusters** that auto-form when 2+ floaters land within 240 px sharing the same `topic_id` AND each member is `clusterEligible`. Click → Crystallize button creates a real Subtopic or Topic at runtime. Crystallize-as-Topic does NOT wrap members in a subtopic — they sit as loose floaters inside the new Topic, awaiting future combinations.
+- **Drag-overlap halo (subtopic-formation gesture)**. Heavy overlap of two floaters in the same topic during drag lights up an amber glow ring; release commits to a cluster, drag-away cancels (member is removed from cluster detection until re-engaged).
+- **Collision repulsion** ("elastic magnetism"). After every drop / land / crystallize, an iterative AABB resolver pushes neighbors away from the just-placed entity so floaters and bubbles never visually overlap.
+- **Dynamic expanded subtopic size**. Bubble height grows with atom count so the inner grid keeps generous breathing room (≥ 9 atoms → taller bubble).
+- **Click-outside-or-ESC closes** the expanded subtopic (no X close button).
+- **Collapsed-state preview dots + intra-subtopic reaction curves** are rendered as CHILDREN of `SubtopicBubble`'s motion.div so they inherit the bubble's transform — zero setState round-trip lag during any drag.
+- **Reaction edges show hover tooltips** explaining the kind (Support / Challenge / Build-on / Question / Cite, with an AI-suggested marker for ghost keys).
 - **Click-toggle mic with Pocket staging**. Streaming atoms hover ~3 s in a Pocket above the dock, then fly to a position computed by the same hydration logic that places them — so fly target = final landing position (cluster-aware).
 
 Your job:
@@ -95,6 +100,22 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
 - [ ] Drag any atom → SVG edges follow live. No wobble. No stutter
 - [ ] Drag an atom outside the bubble (~> 60 px past the edge) → it pops out, becomes a floater. Reactions to it disappear (only in-subtopic edges shown)
 - [ ] Press `ESC` OR click any blank canvas area → bubble morphs back to 220×150 (the X close button has been removed by user direction)
+- [ ] If the subtopic has many atoms (≥ 9), the expanded bubble grows taller — atom band stays roomy, no cramped overlap
+
+#### Atom drag — overlap halo (subtopic-formation gesture)
+
+- [ ] Drag a floater atom in `t-equity` directly on top of another floater (e.g. drag `af1` onto `af3`) → both atoms get an amber glow ring while overlap > ~30 % of the card area
+- [ ] Release while halo is showing → cluster bubble forms with the two atoms (proximity cluster + `clusterEligible = true` commit)
+- [ ] Drag overlap zone, then drag away (halo disappears) BEFORE releasing → no cluster forms; the dropped atom is excluded from cluster detection until next overlap-halo
+
+#### Collision repulsion ("elastic magnetism")
+
+- [ ] Drop a floater near a collapsed subtopic bubble → the bubble (or the atom) gets nudged so they don't overlap
+- [ ] Drop a streamed atom (voice script) → existing same-topic atoms in its landing area get pushed away; readable spacing remains
+
+#### Reaction edge tooltips
+
+- [ ] Hover any reaction edge (the SVG curve / zigzag between two atoms in the expanded subtopic atom band) → after the OS hover delay (~500 ms), a native tooltip surfaces "Support / Challenge / Build-on / Question / Cite — \<short explanation\>". AI-suggested ghost edges append "(AI suggested — pending review)"
 
 #### Subtopic drag ([CLAUDE.md §3](CLAUDE.md))
 

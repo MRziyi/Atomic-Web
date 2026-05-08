@@ -40,12 +40,18 @@ import {
   COLLAPSED_H,
   COLLAPSED_TITLE_BAND,
   COLLAPSED_W,
+  COMPACT_H,
+  COMPACT_W,
   EXPANDED_H,
   EXPANDED_TEXT_BAND,
   EXPANDED_TITLE_BAND,
   EXPANDED_W,
+  PREVIEW_H,
+  PREVIEW_W,
   SubtopicBubble,
+  expandedHeightFor,
 } from "./SubtopicBubble";
+import { resolveOverlaps, type CollisionRect } from "./collision";
 import { TopicVessel } from "./TopicVessel";
 import { StreamingDock } from "@/components/dock/StreamingDock";
 import { InsightsDrawer } from "@/components/insights/InsightsDrawer";
@@ -63,10 +69,7 @@ import { useTour } from "@/lib/stores/tour";
 import { cn } from "@/lib/cn";
 import type { Atom, Reaction, Subtopic, Topic, User } from "@/lib/types";
 
-const COMPACT_W = 162;
-const COMPACT_H = 96;
-const PREVIEW_W = 18;
-const PREVIEW_H = 18;
+// COMPACT_W/H, PREVIEW_W/H now imported from SubtopicBubble (single source).
 
 // Drag-guard module suppresses subtopic click-to-expand while ANY drag (atom
 // or subtopic) is in progress / just finished — see atom-drag-guard.ts.
@@ -89,6 +92,14 @@ interface AtomRecord {
   subtopic_id: string | null;
   topic_id: string | null;
   manual: boolean;
+  /** When false, this atom is excluded from `detectProximityClusters` even if
+   *  it sits within proximity of other floaters. Used to commit the
+   *  "drag-then-move-away cancels the cluster" gesture: dropping a floater
+   *  without the overlap halo flips this to false, which removes it from any
+   *  cluster it would otherwise auto-join. Re-engaging via a future drag with
+   *  halo flips it back to true. Undefined means "treat as true" so fixture
+   *  + streaming atoms keep the existing proximity-cluster behavior. */
+  clusterEligible?: boolean;
 }
 
 const USER_COLOR_HEX: Record<User["color_token"], string> = {
@@ -146,6 +157,12 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   }, [overview]);
 
   const [draggingSubtopicId, setDraggingSubtopicId] = useState<string | null>(null);
+  /** Id of the atom currently being dragged (DraggableAtom.onDragStartTrigger
+   *  sets it; on drag-end it's cleared). Drives the "potential subtopic"
+   *  halo: while this is set, we compute overlap against other floaters in
+   *  the same topic and render a glow ring on both the dragged atom and the
+   *  overlap target. */
+  const [draggingAtomId, setDraggingAtomId] = useState<string | null>(null);
 
   /**
    * Per-subtopic override of fixture topic_id. Lets the user drag a subtopic
@@ -364,16 +381,35 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           manual: false,
         },
       }));
+      // If the atom landed as a floater, immediately schedule collision
+      // resolution with the new atom fixed — anything it overlaps gets
+      // pushed away.
+      if (a.subtopic_id === null) {
+        queueCollisionResolve([`atom:${id}`]);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamedAtomIds, overview, expandedSubtopicId]);
+
+  // Dynamic height of the currently-expanded subtopic, derived from how many
+  // atoms it contains. Width stays fixed (EXPANDED_W). Used everywhere that
+  // previously hard-coded EXPANDED_H — fit(), computePushed, computeTopicGeometry,
+  // the DraggableSubtopic render, etc.
+  const expandedH = useMemo(() => {
+    if (!expandedSubtopicId) return EXPANDED_H;
+    let count = 0;
+    for (const r of Object.values(atomRecords)) {
+      if (r.subtopic_id === expandedSubtopicId) count++;
+    }
+    return expandedHeightFor(count);
+  }, [expandedSubtopicId, atomRecords]);
 
   // Displayed subtopic positions = natural positions + collision-push when one
   // is expanded. Other subtopics get pushed out of the expanded bbox so they
   // never overlap with it.
   const displayedSubtopicPos = useMemo(
-    () => computePushed(subtopicPos, expandedSubtopicId),
-    [subtopicPos, expandedSubtopicId],
+    () => computePushed(subtopicPos, expandedSubtopicId, expandedH),
+    [subtopicPos, expandedSubtopicId, expandedH],
   );
 
   // On expansion change: regrid the prev/new expanded subtopics' atoms (their
@@ -389,8 +425,16 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
 
     setAtomRecords((prev) => {
       const next = { ...prev };
-      const before = computePushed(subtopicPos, prevId);
-      const after = computePushed(subtopicPos, newId);
+      // Use the subtopic-specific atom count to compute its dynamic expanded
+      // height so push-out math matches the rendered bubble.
+      const countFor = (sid: string | null) =>
+        sid
+          ? Object.values(prev).filter((r) => r.subtopic_id === sid).length
+          : 0;
+      const beforeH = prevId ? expandedHeightFor(countFor(prevId)) : EXPANDED_H;
+      const afterH = newId ? expandedHeightFor(countFor(newId)) : EXPANDED_H;
+      const before = computePushed(subtopicPos, prevId, beforeH);
+      const after = computePushed(subtopicPos, newId, afterH);
 
       const affected = new Set(
         [prevId, newId].filter((s): s is string => !!s),
@@ -547,7 +591,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     for (const s of allSubs) {
       const c = subtopicPos[s.id] ?? { x: s.x, y: s.y };
       const W = s.id === expandedSubtopicId ? EXPANDED_W : COLLAPSED_W;
-      const H = s.id === expandedSubtopicId ? EXPANDED_H : COLLAPSED_H;
+      const H = s.id === expandedSubtopicId ? expandedH : COLLAPSED_H;
       minX = Math.min(minX, c.x - W / 2);
       minY = Math.min(minY, c.y - H / 2);
       maxX = Math.max(maxX, c.x + W / 2);
@@ -610,6 +654,133 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     window.addEventListener("pointerup", onUp, { capture: true });
     return () => window.removeEventListener("pointerup", onUp, { capture: true } as EventListenerOptions);
   }, []);
+
+  // -------------------- Refs mirroring state --------------------
+
+  // The drag handlers + the rAF-deferred collision resolver below need
+  // up-to-the-render values without forcing themselves to re-create on every
+  // setState. Refs are written every render and read inside callbacks.
+  const subtopicMembershipRef = useRef(subtopicMembership);
+  subtopicMembershipRef.current = subtopicMembership;
+  const allSubtopicsListRef = useRef(allSubtopicsList);
+  allSubtopicsListRef.current = allSubtopicsList;
+  const atomRecordsRef = useRef(atomRecords);
+  atomRecordsRef.current = atomRecords;
+  const subtopicPosRef = useRef(subtopicPos);
+  subtopicPosRef.current = subtopicPos;
+  const expandedSubtopicIdRef = useRef(expandedSubtopicId);
+  expandedSubtopicIdRef.current = expandedSubtopicId;
+  const expandedHRef = useRef(expandedH);
+  expandedHRef.current = expandedH;
+
+  // -------------------- Collision repulsion --------------------
+
+  /**
+   * After any drop / land / crystallize that places an entity, kick off an
+   * iterative AABB resolver that pushes any overlapping floater atoms or
+   * collapsed/expanded subtopic bubbles apart. The "fixed" entity (the one
+   * the user just placed) doesn't move; everything else makes room. Runs on
+   * the next rAF so prior state writes have committed first.
+   *
+   * Padding is generous (24 px) — readability beats density on a paper
+   * canvas, and the user explicitly asked for breathing room.
+   */
+  const collisionPendingRef = useRef<Set<string> | null>(null);
+  const collisionRafRef = useRef<number | null>(null);
+  const runCollisionResolution = useCallback(() => {
+    collisionRafRef.current = null;
+    const fixed = collisionPendingRef.current;
+    collisionPendingRef.current = null;
+    if (!fixed) return;
+    const atoms = atomRecordsRef.current;
+    const subPos = subtopicPosRef.current;
+    const subs = allSubtopicsListRef.current;
+    const expandedId = expandedSubtopicIdRef.current;
+    const expH = expandedHRef.current;
+
+    const rects: CollisionRect[] = [];
+    for (const [id, r] of Object.entries(atoms)) {
+      // Only floaters participate in canvas-level collision. In-subtopic
+      // atoms are laid out by the bubble's grid (collapsed) or by
+      // computeMemberPosition (expanded) and don't need to repel siblings.
+      if (r.subtopic_id !== null) continue;
+      rects.push({
+        id: `atom:${id}`,
+        x: r.x,
+        y: r.y,
+        w: COMPACT_W,
+        h: COMPACT_H,
+        fixed: fixed.has(`atom:${id}`),
+      });
+    }
+    for (const s of subs) {
+      const c = subPos[s.id] ?? { x: s.x, y: s.y };
+      const isExpanded = s.id === expandedId;
+      const W = isExpanded ? EXPANDED_W : COLLAPSED_W;
+      const H = isExpanded ? expH : COLLAPSED_H;
+      rects.push({
+        id: `sub:${s.id}`,
+        x: c.x - W / 2,
+        y: c.y - H / 2,
+        w: W,
+        h: H,
+        fixed: fixed.has(`sub:${s.id}`),
+      });
+    }
+
+    const moves = resolveOverlaps(rects, 24, 32);
+    if (moves.size === 0) return;
+
+    const atomDelta: Record<string, { x: number; y: number }> = {};
+    const subDelta: Record<string, { x: number; y: number }> = {};
+    for (const [rid, pos] of moves) {
+      if (rid.startsWith("atom:")) {
+        atomDelta[rid.slice(5)] = pos;
+      } else {
+        const sid = rid.slice(4);
+        const isExpanded = sid === expandedId;
+        const W = isExpanded ? EXPANDED_W : COLLAPSED_W;
+        const H = isExpanded ? expH : COLLAPSED_H;
+        // Convert top-left back to center for subtopicPos.
+        subDelta[sid] = { x: pos.x + W / 2, y: pos.y + H / 2 };
+      }
+    }
+    if (Object.keys(atomDelta).length) {
+      setAtomRecords((prev) => {
+        const next = { ...prev };
+        for (const aid in atomDelta) {
+          if (next[aid]) next[aid] = { ...next[aid], ...atomDelta[aid] };
+        }
+        return next;
+      });
+    }
+    if (Object.keys(subDelta).length) {
+      setSubtopicPos((prev) => {
+        const next = { ...prev };
+        for (const sid in subDelta) next[sid] = subDelta[sid];
+        return next;
+      });
+    }
+  }, []);
+  const queueCollisionResolve = useCallback(
+    (fixedIds: string[]) => {
+      if (!collisionPendingRef.current) collisionPendingRef.current = new Set();
+      for (const id of fixedIds) collisionPendingRef.current.add(id);
+      if (collisionRafRef.current !== null) return;
+      collisionRafRef.current = requestAnimationFrame(runCollisionResolution);
+    },
+    [runCollisionResolution],
+  );
+  useEffect(
+    () => () => {
+      if (collisionRafRef.current !== null) {
+        cancelAnimationFrame(collisionRafRef.current);
+        collisionRafRef.current = null;
+      }
+      collisionPendingRef.current = null;
+    },
+    [],
+  );
 
   // -------------------- Hit-test for atom drag --------------------
 
@@ -860,8 +1031,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           return next;
         });
       }
+      // The dropped subtopic is fixed; everything else (other subtopics +
+      // floater atoms) makes room.
+      queueCollisionResolve([`sub:${stid}`]);
     },
-    [onSubtopicDragMove, subtopicMembership],
+    [onSubtopicDragMove, subtopicMembership, queueCollisionResolve],
   );
 
   // -------------------- Topic label drag --------------------
@@ -923,7 +1097,23 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     }
     setDraggingTopicId(null);
     probeFlush("TOPIC-PAN-END/after-setState");
-  }, [overview]);
+    // The whole topic translated as a unit — mark all its member subtopics
+    // (and floater atoms inside the topic) as fixed, so neighboring topics'
+    // subtopics + free floaters get pushed away rather than colliding.
+    if (pending) {
+      const fixedIds: string[] = [];
+      const membership = subtopicMembershipRef.current;
+      for (const sid in membership) {
+        if (membership[sid] === pending.tid) fixedIds.push(`sub:${sid}`);
+      }
+      for (const [aid, r] of Object.entries(atomRecordsRef.current)) {
+        if (r.subtopic_id === null && r.topic_id === pending.tid) {
+          fixedIds.push(`atom:${aid}`);
+        }
+      }
+      if (fixedIds.length) queueCollisionResolve(fixedIds);
+    }
+  }, [overview, queueCollisionResolve]);
 
   /**
    * Drag a Topic by its title label: shift every subtopic position AND every
@@ -941,12 +1131,9 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    * onPan calls. The result is a feedback loop that drives ~100 onPan
    * calls/sec and starves the eventual pointerup, locking the page.
    */
-  const subtopicMembershipRef = useRef(subtopicMembership);
-  subtopicMembershipRef.current = subtopicMembership;
-  // Consolidated subtopic list (fixture + custom) read via ref so callbacks
-  // and useEffects without it in their dep array still see the latest value.
-  const allSubtopicsListRef = useRef(allSubtopicsList);
-  allSubtopicsListRef.current = allSubtopicsList;
+  // (refs + collision-resolution block was hoisted earlier in the component
+  // so onSubtopicDragEnd / onTopicLabelPan / onClusterPanEnd / etc. can call
+  // queueCollisionResolve without a temporal-dead-zone error.)
   const topicPanPendingRef = useRef<{ tid: string; dx: number; dy: number } | null>(
     null,
   );
@@ -1042,6 +1229,55 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     () => new Set(customTopics.map((t) => t.id)),
     [customTopics],
   );
+
+  /**
+   * "Potential-subtopic" overlap halo target. While the user is dragging an
+   * atom, we look for another floater in the SAME topic whose AABB overlaps
+   * the dragged atom by more than `HALO_OVERLAP_RATIO` of the smaller atom's
+   * area. If we find one, both atoms get a glowing ring — releasing in this
+   * state lands them tightly together so the existing proximity-cluster
+   * logic immediately turns them into a subtopic-candidate cluster. Moving
+   * away (overlap drops below the ratio) clears the halo and the gesture
+   * effectively cancels.
+   *
+   * Only floater-vs-floater within the same topic is considered — a halo on
+   * an in-subtopic atom would be confusing, and cross-topic overlap doesn't
+   * map to "form a subtopic" semantics.
+   */
+  const dragHaloTargetId = useMemo(() => {
+    if (!draggingAtomId) return null;
+    const drag = atomRecords[draggingAtomId];
+    if (!drag) return null;
+    const HALO_OVERLAP_RATIO = 0.3;
+    const dragArea = COMPACT_W * COMPACT_H;
+    let bestId: string | null = null;
+    let bestOverlap = 0;
+    for (const [id, r] of Object.entries(atomRecords)) {
+      if (id === draggingAtomId) continue;
+      if (r.subtopic_id !== null) continue;
+      // Same-topic only. The dragged atom's topic_id might still be its
+      // pre-drag value (it updates only on drag-end's hit-test); that's the
+      // semantics we want — "intra-topic overlap → subtopic suggestion".
+      if (r.topic_id !== drag.topic_id) continue;
+      const ox = Math.max(
+        0,
+        Math.min(drag.x + COMPACT_W, r.x + COMPACT_W) -
+          Math.max(drag.x, r.x),
+      );
+      const oy = Math.max(
+        0,
+        Math.min(drag.y + COMPACT_H, r.y + COMPACT_H) -
+          Math.max(drag.y, r.y),
+      );
+      const overlap = ox * oy;
+      if (overlap / dragArea > HALO_OVERLAP_RATIO && overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestId = id;
+      }
+    }
+    return bestId;
+  }, [draggingAtomId, atomRecords]);
+
   const clusters = useMemo(() => {
     const proximity = detectProximityClusters(atomRecords, 240, customTopicIds);
     const insightsList = insights?.convergence_candidates ?? [];
@@ -1206,8 +1442,10 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         return next;
       });
       probeFlush("CLUSTER-PAN-END/after-topic-update");
+      // Cluster members are fixed; everything else makes room.
+      queueCollisionResolve(memberIds.map((id) => `atom:${id}`));
     },
-    [],
+    [queueCollisionResolve],
   );
 
   /**
@@ -1238,9 +1476,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       });
 
       const stamp = Date.now().toString(36);
+      let crystallizedFixedId: string | null = null;
       if (isSubtopicCandidate) {
         const parentTopicId = recs[0].topic_id!;
         const newId = `s-cz-${stamp}`;
+        crystallizedFixedId = `sub:${newId}`;
         const newSubtopic: Subtopic = {
           id: newId,
           topic_id: parentTopicId,
@@ -1331,9 +1571,20 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           }
           return next;
         });
+        // For Topic-cluster crystallize, the members stay where they are —
+        // those atom positions are the "fixed" anchor; everything else makes
+        // room.
+        crystallizedFixedId = null;
       }
+      // Always nudge neighbors away from the freshly placed entity. For the
+      // subtopic case, the new subtopic is fixed; for the topic case, mark
+      // each member atom fixed so neighbors push instead of the atoms.
+      const fixedIds: string[] = [];
+      if (crystallizedFixedId) fixedIds.push(crystallizedFixedId);
+      else fixedIds.push(...memberIds.map((id) => `atom:${id}`));
+      queueCollisionResolve(fixedIds);
     },
-    [atomRecords, insightsLink, workshopId, customTopics],
+    [atomRecords, insightsLink, workshopId, customTopics, queueCollisionResolve],
   );
 
   // -------------------- Dynamic topic geometry --------------------
@@ -1344,6 +1595,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       computeTopicGeometry(
         t,
         expandedSubtopicId,
+        expandedH,
         displayedSubtopicPos,
         atomRecords,
         allSubtopicsList,
@@ -1354,6 +1606,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     overview,
     allTopics,
     expandedSubtopicId,
+    expandedH,
     displayedSubtopicPos,
     atomRecords,
     allSubtopicsList,
@@ -1585,7 +1838,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   subtopic={s}
                   center={c}
                   width={EXPANDED_W}
-                  height={EXPANDED_H}
+                  height={expandedH}
                   instant={followsTopicDrag}
                   onDragStartCapture={onSubtopicDragStartCapture}
                   onDragMove={onSubtopicDragMove}
@@ -1632,6 +1885,8 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
               draggingTopicId !== null && rec.topic_id === draggingTopicId;
             const instantSnap =
               followsSubtopicDrag || followsClusterDrag || followsTopicDrag;
+            const haloed =
+              id === draggingAtomId || id === dragHaloTargetId;
             return (
               <DraggableAtom
                 key={id}
@@ -1642,7 +1897,9 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 dimmed={false}
                 fresh={freshAtomIds.has(id)}
                 instant={instantSnap}
+                haloed={haloed}
                 membership={membershipFor(rec)}
+                onDragStartTrigger={() => setDraggingAtomId(id)}
                 onPositionUpdate={(nx, ny) => {
                   setAtomRecords((prev) => {
                     const cur = prev[id];
@@ -1655,6 +1912,13 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   });
                 }}
                 onDragEnd={(_e, _info, finalScreenX, finalScreenY) => {
+                  // Capture the halo state at the release moment — if the
+                  // dragged atom was overlapping another floater enough to
+                  // show the glow ring, the user is committing to a
+                  // potential subtopic. No halo means "cancelled".
+                  const halodAtRelease =
+                    dragHaloTargetId !== null && draggingAtomId === id;
+                  let droppedAsFloater = false;
                   setAtomRecords((prev) => {
                     const cur = prev[id];
                     if (!cur) return prev;
@@ -1682,8 +1946,35 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                     } else {
                       next[id] = { ...next[id], manual: true };
                     }
+                    droppedAsFloater = newSt === null;
+                    if (droppedAsFloater) {
+                      // halo at release → cluster-eligible (commit). No halo
+                      // → ineligible (cancel). The same flip applies to the
+                      // overlap target so a halo gesture re-engages a
+                      // previously-cancelled neighbor.
+                      next[id] = {
+                        ...next[id],
+                        clusterEligible: halodAtRelease,
+                      };
+                      if (halodAtRelease && dragHaloTargetId) {
+                        const t = next[dragHaloTargetId];
+                        if (t) {
+                          next[dragHaloTargetId] = {
+                            ...t,
+                            clusterEligible: true,
+                          };
+                        }
+                      }
+                    }
                     return next;
                   });
+                  setDraggingAtomId(null);
+                  // If the user dropped this as a floater, the dropped atom
+                  // is fixed and any overlapping floater / collapsed bubble
+                  // gets pushed away.
+                  if (droppedAsFloater) {
+                    queueCollisionResolve([`atom:${id}`]);
+                  }
                 }}
               />
             );
@@ -1854,7 +2145,11 @@ interface DraggableAtomProps {
   fresh?: boolean;
   /** When true, snap to position (no animation) — used while parent subtopic is dragging. */
   instant: boolean;
+  /** When true, render the "potential subtopic" glow halo. Set on the atom
+   *  being dragged AND its current overlap target during drag. */
+  haloed?: boolean;
   membership: AtomMembership | null;
+  onDragStartTrigger?: () => void;
   onPositionUpdate: (x: number, y: number) => void;
   onDragEnd: (
     e: PointerEvent | MouseEvent | TouchEvent,
@@ -1872,7 +2167,9 @@ function DraggableAtom({
   dimmed,
   fresh,
   instant,
+  haloed,
   membership,
+  onDragStartTrigger,
   onPositionUpdate,
   onDragEnd,
 }: DraggableAtomProps) {
@@ -1941,6 +2238,7 @@ function DraggableAtom({
       onDragStart={() => {
         draggingRef.current = true;
         markDragActive();
+        onDragStartTrigger?.();
       }}
       onDragEnd={(e, info) => {
         draggingRef.current = false;
@@ -1964,6 +2262,31 @@ function DraggableAtom({
       animate={{ width: W, height: H, opacity: dimmed ? 0.32 : 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
+      {/* "Potential subtopic" halo — surfaces when this atom is the dragged
+          one OR is the current overlap target. Click-through (no pointer
+          events) and slightly-larger than the atom so it reads as a glow
+          ring around the card. */}
+      {haloed && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute"
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          style={{
+            left: -14,
+            top: -14,
+            width: W + 28,
+            height: H + 28,
+            borderRadius: 18,
+            background:
+              "radial-gradient(closest-side, rgba(217,166,106,0.35) 0%, rgba(217,166,106,0.18) 55%, rgba(217,166,106,0) 100%)",
+            boxShadow:
+              "0 0 0 1.5px rgba(217,166,106,0.55), 0 0 18px 4px rgba(217,166,106,0.35)",
+          }}
+        />
+      )}
       {showAsCard ? (
         <AtomNode
           atom={atom}
@@ -2266,6 +2589,10 @@ function detectProximityClusters(
   for (const [id, r] of Object.entries(atomRecords)) {
     if (r.subtopic_id !== null) continue;
     if (r.topic_id !== null && excludedTopicIds.has(r.topic_id)) continue;
+    // `clusterEligible === false` means the user has just released this atom
+    // without the overlap halo; treat the gesture as a "cancel" by skipping
+    // the atom in cluster detection until a future drag re-engages it.
+    if (r.clusterEligible === false) continue;
     const key = r.topic_id ?? NULL_KEY;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ id, x: r.x, y: r.y });
@@ -2311,12 +2638,13 @@ function detectProximityClusters(
 function computePushed(
   natural: Record<string, { x: number; y: number }>,
   expandedId: string | null,
+  expandedH: number,
 ): Record<string, { x: number; y: number }> {
   const out: Record<string, { x: number; y: number }> = { ...natural };
   if (!expandedId || !out[expandedId]) return out;
   const expC = out[expandedId];
   const minDx = EXPANDED_W / 2 + COLLAPSED_W / 2 + 56;
-  const minDy = EXPANDED_H / 2 + COLLAPSED_H / 2 + 56;
+  const minDy = expandedH / 2 + COLLAPSED_H / 2 + 56;
   for (const sid in out) {
     if (sid === expandedId) continue;
     const c = out[sid];
@@ -2349,6 +2677,7 @@ function computePushed(
 function computeTopicGeometry(
   topic: Topic,
   expandedSubtopicId: string | null,
+  expandedH: number,
   subtopicPositions: Record<string, { x: number; y: number }>,
   atomRecords: Record<string, AtomRecord>,
   allSubtopics: Subtopic[],
@@ -2366,7 +2695,7 @@ function computeTopicGeometry(
     const c = subtopicPositions[s.id] ?? { x: s.x, y: s.y };
     const isExpanded = s.id === expandedSubtopicId;
     const W = isExpanded ? EXPANDED_W : COLLAPSED_W;
-    const H = isExpanded ? EXPANDED_H : COLLAPSED_H;
+    const H = isExpanded ? expandedH : COLLAPSED_H;
     minX = Math.min(minX, c.x - W / 2);
     minY = Math.min(minY, c.y - H / 2);
     maxX = Math.max(maxX, c.x + W / 2);
@@ -2438,7 +2767,10 @@ function computeMemberPosition(
   totalInGroup: number,
 ): { x: number; y: number } {
   const W = isExpanded ? EXPANDED_W : COLLAPSED_W;
-  const H = isExpanded ? EXPANDED_H : COLLAPSED_H;
+  // Expanded height grows with atom count so the inner grid keeps generous
+  // breathing room. Collapsed remains a fixed 150 px (preview-dot grid is
+  // tiny anyway).
+  const H = isExpanded ? expandedHeightFor(totalInGroup) : COLLAPSED_H;
   const titleBand = isExpanded ? EXPANDED_TITLE_BAND : COLLAPSED_TITLE_BAND;
   const textBand = isExpanded ? EXPANDED_TEXT_BAND : 0;
   const aw = isExpanded ? COMPACT_W : PREVIEW_W;

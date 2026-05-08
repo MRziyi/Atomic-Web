@@ -52,6 +52,38 @@ export const PREVIEW_H = 18;
 export const COMPACT_W = 162;
 export const COMPACT_H = 96;
 
+/** Per-row vertical breathing room when laying out compact-card atoms inside
+ *  the expanded bubble. Combined with COMPACT_H this fixes the "cell height"
+ *  of the atom band; expanded bubble height grows with row count so atoms
+ *  never look cramped. */
+const EXPANDED_ROW_CELL_H = COMPACT_H + 36; // 132
+/** Default cols used to estimate row count. `gridLocal` may pick a different
+ *  cols based on aspect, but for total atom counts ≤ ~16 the row count
+ *  matches; the resulting bubble has at least enough height. */
+const EXPANDED_DEFAULT_COLS = 4;
+/** Floor for atom-band height — the band stays "tall enough" even with 1-2
+ *  atoms so the framing/literature text band above it doesn't look stranded. */
+const EXPANDED_ATOM_BAND_MIN_H = 296;
+
+/**
+ * Expanded bubble height grows with `atomCount`. Width is fixed at
+ * `EXPANDED_W` for now (consistent with the original 720 px layout) — only
+ * height adapts. With 6 atoms we hit the H=500 floor; >8 atoms adds rows.
+ */
+export function expandedHeightFor(atomCount: number): number {
+  const rows = Math.max(
+    2,
+    Math.ceil(Math.max(1, atomCount) / EXPANDED_DEFAULT_COLS),
+  );
+  const atomBandH = Math.max(
+    EXPANDED_ATOM_BAND_MIN_H,
+    rows * EXPANDED_ROW_CELL_H,
+  );
+  return (
+    EXPANDED_TITLE_BAND + EXPANDED_TEXT_BAND + atomBandH + BUBBLE_PAD_BOTTOM
+  );
+}
+
 const USER_COLOR_HEX: Record<User["color_token"], string> = {
   rose: "#D88B95",
   sage: "#8FB69C",
@@ -114,7 +146,9 @@ export function SubtopicBubble({
   dimmed,
 }: SubtopicBubbleProps) {
   const W = expanded ? EXPANDED_W : COLLAPSED_W;
-  const H = expanded ? EXPANDED_H : COLLAPSED_H;
+  // Expanded height grows with atom count so densely-populated subtopics get
+  // breathing room (≥4 rows of compact cards lays out comfortably).
+  const H = expanded ? expandedHeightFor(atoms.length) : COLLAPSED_H;
   const titleBand = expanded ? EXPANDED_TITLE_BAND : COLLAPSED_TITLE_BAND;
 
   // Stable topology layout for the collapsed preview. Sorted-by-id keeps the

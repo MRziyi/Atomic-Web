@@ -28,6 +28,17 @@ const COLOR_BY_KIND: Record<ReactionKind, string> = {
   cite: "#8B6FB5",
 };
 
+/** Hover-tooltip copy for each reaction kind. Surfaces via SVG <title> so the
+ *  browser's native tooltip appears after the OS hover delay — matches the
+ *  paper-canvas aesthetic without needing extra DOM. */
+const TOOLTIP_BY_KIND: Record<ReactionKind, string> = {
+  support: "Support — agrees with / reinforces this atom",
+  challenge: "Challenge — disagrees with / pushes back on this atom",
+  build_on: "Build-on — extends or expands on this atom",
+  question: "Question — raises a question about this atom",
+  cite: "Cite — backs the claim with literature",
+};
+
 interface ReactionEdgeProps {
   from: { x: number; y: number };
   to: { x: number; y: number };
@@ -90,6 +101,23 @@ export function ReactionEdge({
         data-edge-id={id}
         style={{ pointerEvents: "stroke" }}
       >
+        <title>
+          {ghost
+            ? `${TOOLTIP_BY_KIND[kind]} (AI suggested — pending review)`
+            : TOOLTIP_BY_KIND[kind]}
+        </title>
+        {/* Invisible wide hit-target for hover so the thin SVG stroke is
+            forgiving — without this the user has to land the cursor exactly
+            on a 2 px line. */}
+        <path
+          d={path}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={Math.max(14, finalStroke + 12)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ pointerEvents: "stroke" }}
+        />
         <path
           d={path}
           fill="none"
