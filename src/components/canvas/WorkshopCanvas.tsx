@@ -71,6 +71,7 @@ const PREVIEW_H = 18;
 // Drag-guard module suppresses subtopic click-to-expand while ANY drag (atom
 // or subtopic) is in progress / just finished — see atom-drag-guard.ts.
 import { markDragActive } from "./atom-drag-guard";
+import { probe, probeEvery, probeFlush, probeReset } from "./drag-probe";
 
 const TOPIC_PAD = 56;
 const TOPIC_MIN_W = 360;
@@ -471,36 +472,47 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [scrolling, setScrolling] = useState(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    e.preventDefault();
-    if (e.ctrlKey) {
-      // Trackpad pinch (Chrome / Safari fire wheel with ctrlKey=true on pinch).
-      const rect = containerRef.current.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      const delta = e.deltaY > 0 ? 0.94 : 1.06;
-      const nextZoom = clamp(camera.zoom * delta, 0.4, 2.4);
-      const ratio = nextZoom / camera.zoom;
-      setCamera({
-        zoom: nextZoom,
-        x: cx - (cx - camera.x) * ratio,
-        y: cy - (cy - camera.y) * ratio,
-      });
-    } else {
-      // Two-finger pan (or mouse wheel). 1.4× multiplier brings the perceived
-      // pan distance close to mouse-drag-pan. We also flag scrolling so the
-      // camera transform is instant for the duration of the gesture.
-      const PAN_MULT = 1.4;
-      setCamera({
-        x: camera.x - e.deltaX * PAN_MULT,
-        y: camera.y - e.deltaY * PAN_MULT,
-      });
-    }
-    if (!scrolling) setScrolling(true);
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => setScrolling(false), 120);
-  };
+  // Wheel must be attached as a NATIVE non-passive listener — React 19
+  // synthetic wheel events are passive, and `e.preventDefault()` on a passive
+  // event throws hundreds of "Unable to preventDefault inside passive event
+  // listener invocation" warnings. We read camera/scrolling from refs so this
+  // listener never needs to re-attach.
+  const cameraRef = useRef(camera);
+  cameraRef.current = camera;
+  const scrollingRef = useRef(scrolling);
+  scrollingRef.current = scrolling;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const cam = cameraRef.current;
+      if (e.ctrlKey) {
+        const rect = el.getBoundingClientRect();
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        const delta = e.deltaY > 0 ? 0.94 : 1.06;
+        const nextZoom = clamp(cam.zoom * delta, 0.4, 2.4);
+        const ratio = nextZoom / cam.zoom;
+        setCamera({
+          zoom: nextZoom,
+          x: cx - (cx - cam.x) * ratio,
+          y: cy - (cy - cam.y) * ratio,
+        });
+      } else {
+        const PAN_MULT = 1.4;
+        setCamera({
+          x: cam.x - e.deltaX * PAN_MULT,
+          y: cam.y - e.deltaY * PAN_MULT,
+        });
+      }
+      if (!scrollingRef.current) setScrolling(true);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => setScrolling(false), 120);
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, [setCamera]);
 
   useEffect(() => () => {
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
@@ -561,6 +573,21 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [expandedSubtopicId, expandSubtopic]);
+
+  // Capture-phase pointer/mouse-up tracer — fires BEFORE framer-motion's pan
+  // tracker dispatches onPanEnd. If the page freezes and we still see this
+  // marker but not the framer one, the freeze is in framer's pan-end logic.
+  useEffect(() => {
+    const onUp = (e: PointerEvent) => {
+      probeFlush(
+        `WINDOW-POINTERUP target=${(e.target as HTMLElement)?.getAttribute?.(
+          "data-canvas-child",
+        ) ?? (e.target as HTMLElement)?.tagName ?? "?"}`,
+      );
+    };
+    window.addEventListener("pointerup", onUp, { capture: true });
+    return () => window.removeEventListener("pointerup", onUp, { capture: true } as EventListenerOptions);
+  }, []);
 
   // -------------------- Hit-test for atom drag --------------------
 
@@ -824,36 +851,37 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
 
   const onTopicLabelPanStart = useCallback((tid: string) => {
+    probeReset();
+    probe("topic-pan-start", { tid });
     markDragActive();
     setDraggingTopicId(tid);
   }, []);
 
   const onTopicLabelPanEnd = useCallback(() => {
+    probeFlush("TOPIC-PAN-END/before-setState");
     markDragActive();
-    setDraggingTopicId(null);
-  }, []);
-
-  /**
-   * Drag a Topic by its title label: shift every subtopic position AND every
-   * atom record (subtopic-bound OR floater) whose topic_id matches by the
-   * same canvas-coord delta. The topic vessel recomputes from these.
-   */
-  const onTopicLabelPan = useCallback(
-    (tid: string, dxScreen: number, dyScreen: number) => {
-      markDragActive();
-      const dx = dxScreen / camera.zoom;
-      const dy = dyScreen / camera.zoom;
-      if (!overview) return;
+    // Flush any pending pan-delta synchronously so the final position is
+    // applied in the same render as the dragging-topic flag clearing.
+    if (topicPanRafRef.current !== null) {
+      cancelAnimationFrame(topicPanRafRef.current);
+      topicPanRafRef.current = null;
+    }
+    const pending = topicPanPendingRef.current;
+    topicPanPendingRef.current = null;
+    if (pending && overview) {
       const memberSubIds = new Set(
         overview.topics
-          .find((t) => t.id === tid)
+          .find((t) => t.id === pending.tid)
           ?.subtopics.map((s) => s.id) ?? [],
       );
       setSubtopicPos((prev) => {
         const next = { ...prev };
         for (const sid in next) {
           if (memberSubIds.has(sid)) {
-            next[sid] = { x: next[sid].x + dx, y: next[sid].y + dy };
+            next[sid] = {
+              x: next[sid].x + pending.dx,
+              y: next[sid].y + pending.dy,
+            };
           }
         }
         return next;
@@ -861,15 +889,98 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       setAtomRecords((prev) => {
         const next = { ...prev };
         for (const aid in next) {
-          if (next[aid].topic_id === tid) {
-            next[aid] = { ...next[aid], x: next[aid].x + dx, y: next[aid].y + dy };
+          if (next[aid].topic_id === pending.tid) {
+            next[aid] = {
+              ...next[aid],
+              x: next[aid].x + pending.dx,
+              y: next[aid].y + pending.dy,
+            };
           }
         }
         return next;
       });
+    }
+    setDraggingTopicId(null);
+    probeFlush("TOPIC-PAN-END/after-setState");
+  }, [overview]);
+
+  /**
+   * Drag a Topic by its title label: shift every subtopic position AND every
+   * atom record (subtopic-bound OR floater) whose topic_id matches by the
+   * same canvas-coord delta. The topic vessel recomputes from these.
+   *
+   * Pan deltas are accumulated in a ref and flushed on rAF — without this,
+   * each onPan synchronously runs setState → render → layout shift, which
+   * causes the browser to dispatch synthetic pointermoves that trigger more
+   * onPan calls. The result is a feedback loop that drives ~100 onPan
+   * calls/sec and starves the eventual pointerup, locking the page.
+   */
+  const topicPanPendingRef = useRef<{ tid: string; dx: number; dy: number } | null>(
+    null,
+  );
+  const topicPanRafRef = useRef<number | null>(null);
+  const onTopicLabelPan = useCallback(
+    (tid: string, dxScreen: number, dyScreen: number) => {
+      probeEvery("topic-pan", 10, { tid, dx: dxScreen, dy: dyScreen });
+      markDragActive();
+      const dx = dxScreen / camera.zoom;
+      const dy = dyScreen / camera.zoom;
+      if (!overview) return;
+      const pending = topicPanPendingRef.current;
+      if (pending && pending.tid === tid) {
+        pending.dx += dx;
+        pending.dy += dy;
+      } else {
+        topicPanPendingRef.current = { tid, dx, dy };
+      }
+      if (topicPanRafRef.current !== null) return;
+      topicPanRafRef.current = requestAnimationFrame(() => {
+        topicPanRafRef.current = null;
+        const p = topicPanPendingRef.current;
+        if (!p) return;
+        topicPanPendingRef.current = null;
+        const memberSubIds = new Set(
+          overview.topics
+            .find((t) => t.id === p.tid)
+            ?.subtopics.map((s) => s.id) ?? [],
+        );
+        setSubtopicPos((prev) => {
+          const next = { ...prev };
+          for (const sid in next) {
+            if (memberSubIds.has(sid)) {
+              next[sid] = { x: next[sid].x + p.dx, y: next[sid].y + p.dy };
+            }
+          }
+          return next;
+        });
+        setAtomRecords((prev) => {
+          const next = { ...prev };
+          for (const aid in next) {
+            if (next[aid].topic_id === p.tid) {
+              next[aid] = {
+                ...next[aid],
+                x: next[aid].x + p.dx,
+                y: next[aid].y + p.dy,
+              };
+            }
+          }
+          return next;
+        });
+      });
     },
     [camera.zoom, overview],
   );
+  // Flush any pending topic-pan rAF on unmount so we don't apply state into
+  // an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (topicPanRafRef.current !== null) {
+        cancelAnimationFrame(topicPanRafRef.current);
+        topicPanRafRef.current = null;
+      }
+      topicPanPendingRef.current = null;
+    };
+  }, []);
 
   // -------------------- Cluster detection --------------------
 
@@ -935,31 +1046,64 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   >(null);
 
   const onClusterPanStart = useCallback((memberIds: string[]) => {
+    probeReset();
+    probe("cluster-pan-start", { count: memberIds.length });
     markDragActive();
     setDraggingClusterMemberIds(memberIds);
   }, []);
 
   /**
    * Pan a cluster as a single unit: shift every member atom by the same canvas-
-   * coord delta. Fires on every onPan tick.
+   * coord delta. Pan deltas are accumulated and flushed on rAF for the same
+   * reason as `onTopicLabelPan` (avoids the synthetic-pointermove feedback
+   * loop that locks the page).
    */
+  const clusterPanPendingRef = useRef<{ ids: string[]; dx: number; dy: number } | null>(
+    null,
+  );
+  const clusterPanRafRef = useRef<number | null>(null);
   const onClusterPan = useCallback(
     (memberIds: string[], dxScreen: number, dyScreen: number) => {
+      probeEvery("cluster-pan", 10);
       markDragActive();
       const dx = dxScreen / camera.zoom;
       const dy = dyScreen / camera.zoom;
-      setAtomRecords((prev) => {
-        const next = { ...prev };
-        for (const id of memberIds) {
-          if (next[id]) {
-            next[id] = { ...next[id], x: next[id].x + dx, y: next[id].y + dy };
+      const pending = clusterPanPendingRef.current;
+      if (pending) {
+        pending.dx += dx;
+        pending.dy += dy;
+        pending.ids = memberIds;
+      } else {
+        clusterPanPendingRef.current = { ids: memberIds, dx, dy };
+      }
+      if (clusterPanRafRef.current !== null) return;
+      clusterPanRafRef.current = requestAnimationFrame(() => {
+        clusterPanRafRef.current = null;
+        const p = clusterPanPendingRef.current;
+        if (!p) return;
+        clusterPanPendingRef.current = null;
+        setAtomRecords((prev) => {
+          const next = { ...prev };
+          for (const id of p.ids) {
+            if (next[id]) {
+              next[id] = { ...next[id], x: next[id].x + p.dx, y: next[id].y + p.dy };
+            }
           }
-        }
-        return next;
+          return next;
+        });
       });
     },
     [camera.zoom],
   );
+  useEffect(() => {
+    return () => {
+      if (clusterPanRafRef.current !== null) {
+        cancelAnimationFrame(clusterPanRafRef.current);
+        clusterPanRafRef.current = null;
+      }
+      clusterPanPendingRef.current = null;
+    };
+  }, []);
 
   /**
    * After cluster drag-end: hit-test the drop point against topic vessels.
@@ -969,8 +1113,33 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    */
   const onClusterPanEnd = useCallback(
     (memberIds: string[], screenX: number, screenY: number) => {
+      probeFlush("CLUSTER-PAN-END/before-setState");
       markDragActive();
+      // Flush any pending pan-delta synchronously (see onTopicLabelPanEnd
+      // for the rationale).
+      if (clusterPanRafRef.current !== null) {
+        cancelAnimationFrame(clusterPanRafRef.current);
+        clusterPanRafRef.current = null;
+      }
+      const pendingPan = clusterPanPendingRef.current;
+      clusterPanPendingRef.current = null;
+      if (pendingPan) {
+        setAtomRecords((prev) => {
+          const next = { ...prev };
+          for (const id of pendingPan.ids) {
+            if (next[id]) {
+              next[id] = {
+                ...next[id],
+                x: next[id].x + pendingPan.dx,
+                y: next[id].y + pendingPan.dy,
+              };
+            }
+          }
+          return next;
+        });
+      }
       setDraggingClusterMemberIds(null);
+      probeFlush("CLUSTER-PAN-END/after-setState");
       if (typeof document === "undefined") return;
       let landedTopicId: string | null = null;
       const topicEls = document.querySelectorAll<HTMLElement>("[data-topic-id]");
@@ -1000,6 +1169,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         }
         return next;
       });
+      probeFlush("CLUSTER-PAN-END/after-topic-update");
     },
     [],
   );
@@ -1256,7 +1426,6 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        onWheel={onWheel}
         className={cn(
           "absolute inset-0 cursor-grab select-none",
           panning && "cursor-grabbing",
@@ -1328,6 +1497,9 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
               .filter(([, r]) => r.subtopic_id === s.id)
               .map(([id]) => allAtomsById[id])
               .filter(Boolean);
+            const followsTopicDrag =
+              draggingTopicId !== null &&
+              subtopicMembership[s.id] === draggingTopicId;
             return (
               <DraggableSubtopic
                 key={s.id}
@@ -1335,6 +1507,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 center={c}
                 width={COLLAPSED_W}
                 height={COLLAPSED_H}
+                instant={followsTopicDrag}
                 onDragStartCapture={onSubtopicDragStartCapture}
                 onDragMove={onSubtopicDragMove}
                 onDragEnd={onSubtopicDragEnd}
@@ -1405,6 +1578,9 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 .filter(([, r]) => r.subtopic_id === s.id)
                 .map(([id]) => allAtomsById[id])
                 .filter(Boolean);
+              const followsTopicDrag =
+                draggingTopicId !== null &&
+                subtopicMembership[s.id] === draggingTopicId;
               return (
                 <DraggableSubtopic
                   key={s.id}
@@ -1412,6 +1588,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   center={c}
                   width={EXPANDED_W}
                   height={EXPANDED_H}
+                  instant={followsTopicDrag}
                   onDragStartCapture={onSubtopicDragStartCapture}
                   onDragMove={onSubtopicDragMove}
                   onDragEnd={onSubtopicDragEnd}
@@ -1542,6 +1719,7 @@ function DraggableSubtopic({
   center,
   width,
   height,
+  instant,
   onDragStartCapture,
   onDragMove,
   onDragEnd,
@@ -1553,6 +1731,12 @@ function DraggableSubtopic({
   width: number;
   /** Visible bubble height. */
   height: number;
+  /** When true (parent topic is being dragged), snap to position instead of
+   *  tweening. Without this, a topic-drag fires `setSubtopicPos` per frame,
+   *  every member subtopic spawns a fresh 0.45 s tween each frame, and the
+   *  accumulated tween queue locks the main thread on release. Same shape as
+   *  the `instant` flag on DraggableAtom. */
+  instant: boolean;
   onDragStartCapture: (stid: string, sx: number, sy: number) => void;
   onDragMove: (stid: string, nx: number, ny: number) => void;
   onDragEnd: (stid: string, nx: number, ny: number) => void;
@@ -1570,6 +1754,24 @@ function DraggableSubtopic({
 
   useEffect(() => {
     if (draggingRef.current) return;
+    if (instant) {
+      probeEvery("sub-eff/snap", 5, { stid: subtopic.id });
+      x.set(topLeftX);
+      y.set(topLeftY);
+      return;
+    }
+    // Skip the tween when already at target. Prevents a barrage of no-op tween
+    // creations right after a topic drag releases (instant mode just `set` the
+    // values, so the next pass with instant=false should observe dx≈0).
+    const dx = topLeftX - x.get();
+    const dy = topLeftY - y.get();
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      probeEvery("sub-eff/skip-match", 5, { stid: subtopic.id });
+      x.set(topLeftX);
+      y.set(topLeftY);
+      return;
+    }
+    probe("sub-eff/animate", { stid: subtopic.id, dx, dy });
     // Use the SAME duration + easing as SubtopicBubble's width/height morph so
     // the bubble's center and corners stay aligned mid-animation (no drift).
     const ax = animate(x, topLeftX, {
@@ -1586,7 +1788,7 @@ function DraggableSubtopic({
       ax.stop();
       ay.stop();
     };
-  }, [topLeftX, topLeftY, x, y]);
+  }, [topLeftX, topLeftY, x, y, instant, subtopic.id]);
 
   // Report current CENTER (not top-left) to parent during drag so subtopicPos
   // remains semantically the bubble center.
@@ -1687,6 +1889,7 @@ function DraggableAtom({
   useEffect(() => {
     if (draggingRef.current) return;
     if (instant) {
+      probeEvery("atom-eff/snap", 20);
       x.set(position.x);
       y.set(position.y);
       return;
@@ -1697,10 +1900,12 @@ function DraggableAtom({
     const dx = position.x - x.get();
     const dy = position.y - y.get();
     if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      probeEvery("atom-eff/skip-match", 20);
       x.set(position.x);
       y.set(position.y);
       return;
     }
+    probe("atom-eff/animate", { id: atom.id, dx, dy });
     const ax = animate(x, position.x, {
       type: "tween",
       duration: 0.45,
@@ -1715,7 +1920,7 @@ function DraggableAtom({
       ax.stop();
       ay.stop();
     };
-  }, [position.x, position.y, instant, x, y]);
+  }, [position.x, position.y, instant, x, y, atom.id]);
 
   useMotionValueEvent(x, "change", (val) => {
     if (draggingRef.current) onPositionUpdate(val, y.get());
@@ -1981,12 +2186,18 @@ function ClusterBubble({
         onPanStart();
       }}
       onPan={(_e, info) => {
+        // Skip layout-shift-induced synthetic pointermoves (see TopicVessel
+        // for the full explanation). Without this, dragging the cluster locks
+        // the page in a synthetic-pointermove → setState → relayout loop.
+        if (info.delta.x === 0 && info.delta.y === 0) return;
         markDragActive();
         onPan(info.delta.x, info.delta.y);
       }}
       onPanEnd={(_e, info) => {
+        probeFlush("CLUSTER:framer-onPanEnd-entry");
         markDragActive();
         onPanEnd(info.point.x, info.point.y);
+        probeFlush("CLUSTER:framer-onPanEnd-exit");
       }}
     >
       {/* Dashed candidate outline. Subtopic = squircle; Topic = softer

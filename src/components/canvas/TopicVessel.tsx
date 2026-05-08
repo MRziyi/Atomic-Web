@@ -18,6 +18,7 @@ import {
   markDragActive,
   wasRecentlyDragged,
 } from "./atom-drag-guard";
+import { probeFlush } from "./drag-probe";
 import type { Topic } from "@/lib/types";
 
 interface TopicVesselProps {
@@ -121,13 +122,21 @@ export function TopicVessel({
         }}
         onPan={(_e, info) => {
           if (!onLabelPan) return;
+          // Zero-delta events are usually browser-synthesized pointermoves
+          // emitted when the cursor's underlying element changes due to a
+          // layout shift. Acting on them creates a feedback loop:
+          // onPan → setState → layout shift → synthetic pointermove → onPan…
+          // which starves the eventual pointerup and locks the page.
+          if (info.delta.x === 0 && info.delta.y === 0) return;
           markDragActive();
           onLabelPan(info.delta.x, info.delta.y);
         }}
         onPanEnd={() => {
           if (!onLabelPan) return;
+          probeFlush("TOPIC-LABEL:framer-onPanEnd-entry");
           markDragActive();
           onLabelPanEnd?.();
+          probeFlush("TOPIC-LABEL:framer-onPanEnd-exit");
         }}
         onClick={(e) => {
           // Block any descendant click handlers if we just dragged.
