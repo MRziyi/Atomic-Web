@@ -14,15 +14,32 @@ import { SARAH } from "./fixtures";
 
 type Listener = (e: StreamEvent) => void;
 
+/**
+ * Demo voice script — six lands cover all six landing scenarios from
+ * Design §C.6. Pressing the mic exercises the entire matrix without
+ * additional user input.
+ *
+ *   land #1 → (c) subtopic atom in s-language
+ *   land #2 → (b) topic floater in t-meta
+ *   land #3 → (f) another t-meta floater → combines with #2 into a contextual
+ *             Subtopic cluster (proximity ≤ 240 px)
+ *   land #4 → (d) topic floater in t-equity → joins the existing
+ *             af1/af2/af3 cluster
+ *   land #5 → (a) free canvas floater (unaffiliated)
+ *   land #6 → (e) another free floater → combines with #5 into a contextual
+ *             Topic cluster
+ *
+ * Plus a retract demo (self-correction) before land #1.
+ */
 const VOICE_SCRIPT: Array<
   | { kind: "tx"; text: string; delay: number }
   | { kind: "emerge"; text: string; subtopic: string | null; topic: string | null; confidence: number; delay: number }
   | { kind: "retract"; delay: number }
   | { kind: "land"; delay: number }
 > = [
+  // --- self-correction (retract) ---
   { kind: "tx", text: "I think the language bias issue", delay: 500 },
-  { kind: "tx", text: "I think the language bias issue extends further—", delay: 500 },
-  { kind: "tx", text: "I think the language bias issue extends further—when scaffolding gets translated", delay: 500 },
+  { kind: "tx", text: "I think the language bias issue extends—", delay: 500 },
   {
     kind: "emerge",
     text: "Translated scaffolding loses metacognitive cues",
@@ -31,10 +48,10 @@ const VOICE_SCRIPT: Array<
     confidence: 0.62,
     delay: 200,
   },
-  // Self-correction window (Design §D.1, 200ms hold). The user backtracks
-  // before this candidate lands, so the dock retracts it instead of flying.
   { kind: "tx", text: "actually—not quite, I meant", delay: 500 },
   { kind: "retract", delay: 100 },
+
+  // --- (c) lands inside s-language subtopic ---
   { kind: "tx", text: "warmth markers feel transactional in Korean", delay: 500 },
   {
     kind: "emerge",
@@ -45,16 +62,66 @@ const VOICE_SCRIPT: Array<
     delay: 200,
   },
   { kind: "land", delay: 800 },
-  { kind: "tx", text: "and Mandarin learners get fewer self-explanation prompts", delay: 500 },
+
+  // --- (b) topic-only floater in t-meta ---
+  { kind: "tx", text: "metacognition broadly cuts across these", delay: 500 },
   {
     kind: "emerge",
-    text: "Mandarin learners receive fewer self-explanation prompts",
-    subtopic: "s-language",
-    topic: "t-equity",
-    confidence: 0.84,
+    text: "Metacognitive support spans calibration and self-explanation",
+    subtopic: null,
+    topic: "t-meta",
+    confidence: 0.72,
     delay: 200,
   },
-  { kind: "land", delay: 800 },
+  { kind: "land", delay: 700 },
+
+  // --- (f) another t-meta floater → cluster forms with #2 ---
+  { kind: "tx", text: "and worth flagging — confidence calibration matters", delay: 500 },
+  {
+    kind: "emerge",
+    text: "Confidence calibration is a metacognitive primitive",
+    subtopic: null,
+    topic: "t-meta",
+    confidence: 0.68,
+    delay: 200,
+  },
+  { kind: "land", delay: 700 },
+
+  // --- (d) joins existing af1/af2/af3 cluster in t-equity ---
+  { kind: "tx", text: "Tagalog tutors strip context cues entirely", delay: 500 },
+  {
+    kind: "emerge",
+    text: "Tagalog tutors strip context cues entirely",
+    subtopic: null,
+    topic: "t-equity",
+    confidence: 0.74,
+    delay: 200,
+  },
+  { kind: "land", delay: 700 },
+
+  // --- (a) free canvas floater (no topic) ---
+  { kind: "tx", text: "does any of this generalize to grade school?", delay: 500 },
+  {
+    kind: "emerge",
+    text: "Does this generalize to K-12 settings?",
+    subtopic: null,
+    topic: null,
+    confidence: 0.55,
+    delay: 200,
+  },
+  { kind: "land", delay: 700 },
+
+  // --- (e) another free floater → cluster forms with #5 ---
+  { kind: "tx", text: "and adult learners react differently in any case", delay: 500 },
+  {
+    kind: "emerge",
+    text: "Adult learners exhibit different help-seeking patterns",
+    subtopic: null,
+    topic: null,
+    confidence: 0.62,
+    delay: 200,
+  },
+  { kind: "land", delay: 700 },
 ];
 
 let counter = 0;
@@ -92,6 +159,13 @@ export class MockStreamSession {
 
   /** Begin the canned voice sequence. */
   startVoice() {
+    if (this.stopped) {
+      console.warn("[mock-stream] startVoice on stopped session — ignoring");
+      return;
+    }
+    console.log(
+      `[mock-stream] startVoice (${VOICE_SCRIPT.length} steps, ${this.listeners.length} listener(s))`,
+    );
     let cumulative = 0;
     const chunkId = nextId("chk");
 
@@ -183,10 +257,16 @@ export class MockStreamSession {
 
   stop() {
     if (this.stopped) return;
+    console.log(
+      `[mock-stream] stop — clearing ${this.timers.length} pending timer(s)`,
+    );
+    // Notify listeners BEFORE marking stopped so the dock can clean its UI.
+    for (const l of this.listeners) l({ type: "stream_end" });
     this.stopped = true;
     for (const t of this.timers) clearTimeout(t);
     this.timers = [];
-    this.emit({ type: "stream_end" });
+    this.listeners = [];
+    this.candidateBuffer = [];
   }
 }
 

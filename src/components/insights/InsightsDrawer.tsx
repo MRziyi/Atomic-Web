@@ -120,19 +120,36 @@ export function InsightsDrawer({
                     <p className="mt-1 text-[12px] italic text-ink-3">
                       {c.floater_atom_ids.length} floaters converge
                     </p>
-                    <button
-                      type="button"
-                      className="mt-2 text-[12px] font-mono uppercase tracking-wider text-ink hover:text-ink-2"
-                      onClick={() =>
-                        crystallize.mutate({
-                          workshop_id: workshopId,
-                          floater_atom_ids: c.floater_atom_ids,
-                          title: c.suggested_title,
-                        })
-                      }
-                    >
-                      crystallize →
-                    </button>
+                    <div className="mt-2 flex gap-3 text-[12px] font-mono uppercase tracking-wider">
+                      <button
+                        type="button"
+                        className="text-ink hover:text-ink-2"
+                        onClick={() =>
+                          crystallize.mutate({
+                            workshop_id: workshopId,
+                            floater_atom_ids: c.floater_atom_ids,
+                            kind: "subtopic",
+                            title: c.suggested_title,
+                          })
+                        }
+                      >
+                        as subtopic →
+                      </button>
+                      <button
+                        type="button"
+                        className="text-ink-3 hover:text-ink-2"
+                        onClick={() =>
+                          crystallize.mutate({
+                            workshop_id: workshopId,
+                            floater_atom_ids: c.floater_atom_ids,
+                            kind: "topic",
+                            title: c.suggested_title,
+                          })
+                        }
+                      >
+                        as topic →
+                      </button>
+                    </div>
                   </Item>
                 ))}
                 {data && data.convergence_candidates.length === 0 && (

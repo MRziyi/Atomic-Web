@@ -180,6 +180,9 @@ export function useCrystallize() {
     mutationFn: async (params: {
       workshop_id: string;
       floater_atom_ids: string[];
+      /** Whether to crystallize into a new Subtopic (typical, in-topic) or a
+       *  new Topic (cross-topic / out-of-topic clusters). */
+      kind: "subtopic" | "topic";
       title?: string;
       framing?: string;
     }) => delay(400, params),
