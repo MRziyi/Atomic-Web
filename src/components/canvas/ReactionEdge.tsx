@@ -97,18 +97,11 @@ export function ReactionEdge({
           />
         </marker>
       </defs>
-      <g
-        data-edge-id={id}
-        style={{ pointerEvents: "stroke" }}
-      >
-        <title>
-          {ghost
-            ? `${TOOLTIP_BY_KIND[kind]} (AI suggested — pending review)`
-            : TOOLTIP_BY_KIND[kind]}
-        </title>
-        {/* Invisible wide hit-target for hover so the thin SVG stroke is
-            forgiving — without this the user has to land the cursor exactly
-            on a 2 px line. */}
+      <g data-edge-id={id}>
+        {/* Invisible wide hit-target. SVG `<title>` is only surfaced as a
+            tooltip when the user hovers the element that contains it — Chrome
+            does NOT walk up to the parent <g>. The title MUST be a direct
+            child of the path that actually receives hover. */}
         <path
           d={path}
           fill="none"
@@ -116,8 +109,14 @@ export function ReactionEdge({
           strokeWidth={Math.max(14, finalStroke + 12)}
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ pointerEvents: "stroke" }}
-        />
+          style={{ pointerEvents: "stroke", cursor: "help" }}
+        >
+          <title>
+            {ghost
+              ? `${TOOLTIP_BY_KIND[kind]} (AI suggested — pending review)`
+              : TOOLTIP_BY_KIND[kind]}
+          </title>
+        </path>
         <path
           d={path}
           fill="none"
@@ -128,6 +127,7 @@ export function ReactionEdge({
           strokeLinejoin="round"
           strokeDasharray={dashed ? "4 4" : undefined}
           markerEnd={showArrow ? `url(#${arrowMarkerId})` : undefined}
+          style={{ pointerEvents: "none" }}
         />
         {kind === "question" && (
           <text

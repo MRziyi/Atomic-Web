@@ -10,7 +10,7 @@ Atomic Ideation is a multi-user research-ideation canvas. The frontend now ships
 - **Squircle bubble** language with bubble-realistic surface (gradient, top-left highlight, multi-shadow). Topic vessels are watercolor / ink-wash rounded rectangles.
 - **Universal drag system** built on framer motion values + `instant=true` propagation during group drags (subtopic / topic / cluster) + rAF-batched pan setStates → no tween storms, no synthetic-pointermove feedback loops, no freezes.
 - **Proximity-detected clusters** that auto-form when 2+ floaters land within 240 px sharing the same `topic_id` AND each member is `clusterEligible`. Click → Crystallize button creates a real Subtopic or Topic at runtime. Crystallize-as-Topic does NOT wrap members in a subtopic — they sit as loose floaters inside the new Topic, awaiting future combinations.
-- **Drag-overlap halo (subtopic-formation gesture)**. Heavy overlap of two floaters in the same topic during drag lights up an amber glow ring; release commits to a cluster, drag-away cancels (member is removed from cluster detection until re-engaged).
+- **Drag-overlap halo (subtopic preview)**. Heavy overlap of two floaters in the same topic during drag draws a single dashed amber squircle around BOTH atoms — a preview of the subtopic they'd form. On release, the existing 240 px proximity cluster takes over and `ClusterBubble` paints in the same place (preview → committed cluster, visually continuous). The halo is feedback-only; cluster formation remains proximity-driven.
 - **Collision repulsion** ("elastic magnetism"). After every drop / land / crystallize, an iterative AABB resolver pushes neighbors away from the just-placed entity so floaters and bubbles never visually overlap.
 - **Dynamic expanded subtopic size**. Bubble height grows with atom count so the inner grid keeps generous breathing room (≥ 9 atoms → taller bubble).
 - **Click-outside-or-ESC closes** the expanded subtopic (no X close button).
@@ -102,11 +102,12 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
 - [ ] Press `ESC` OR click any blank canvas area → bubble morphs back to 220×150 (the X close button has been removed by user direction)
 - [ ] If the subtopic has many atoms (≥ 9), the expanded bubble grows taller — atom band stays roomy, no cramped overlap
 
-#### Atom drag — overlap halo (subtopic-formation gesture)
+#### Atom drag — overlap halo (subtopic preview)
 
-- [ ] Drag a floater atom in `t-equity` directly on top of another floater (e.g. drag `af1` onto `af3`) → both atoms get an amber glow ring while overlap > ~30 % of the card area
-- [ ] Release while halo is showing → cluster bubble forms with the two atoms (proximity cluster + `clusterEligible = true` commit)
-- [ ] Drag overlap zone, then drag away (halo disappears) BEFORE releasing → no cluster forms; the dropped atom is excluded from cluster detection until next overlap-halo
+- [ ] Drag a floater atom in `t-equity` directly on top of another floater (e.g. drag `af1` onto `af3`) → a single dashed amber squircle frames both atoms together while overlap > ~30 % of the dragged-card area
+- [ ] Release while halo is showing → halo disappears, the regular dashed `ClusterBubble` paints in the same place (atoms are still within 240 px proximity)
+- [ ] Pure proximity (drop near another floater without heavy overlap) → no halo during drag, but `ClusterBubble` still forms on release as long as both atoms are within 240 px (proximity-driven, the halo is preview-only)
+- [ ] Move atom > 240 px from any other floater → no halo, no cluster
 
 #### Collision repulsion ("elastic magnetism")
 

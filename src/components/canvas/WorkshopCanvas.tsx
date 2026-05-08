@@ -92,14 +92,6 @@ interface AtomRecord {
   subtopic_id: string | null;
   topic_id: string | null;
   manual: boolean;
-  /** When false, this atom is excluded from `detectProximityClusters` even if
-   *  it sits within proximity of other floaters. Used to commit the
-   *  "drag-then-move-away cancels the cluster" gesture: dropping a floater
-   *  without the overlap halo flips this to false, which removes it from any
-   *  cluster it would otherwise auto-join. Re-engaging via a future drag with
-   *  halo flips it back to true. Undefined means "treat as true" so fixture
-   *  + streaming atoms keep the existing proximity-cluster behavior. */
-  clusterEligible?: boolean;
 }
 
 const USER_COLOR_HEX: Record<User["color_token"], string> = {
@@ -1866,6 +1858,47 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
             expandedSubtopicId={expandedSubtopicId}
           />
 
+          {/* Drag-overlap halo — a single dashed amber squircle that frames
+              BOTH the dragged atom and its overlap target while a "potential
+              subtopic" gesture is active. Painted under the atom layer so the
+              atoms sit on top. Releasing while the halo is up leaves the
+              atoms close enough that the existing 240 px proximity cluster
+              fires on the next render and the dashed `ClusterBubble` appears
+              in the same place — visual continuity from preview → committed. */}
+          {draggingAtomId &&
+            dragHaloTargetId &&
+            (() => {
+              const a = atomRecords[draggingAtomId];
+              const b = atomRecords[dragHaloTargetId];
+              if (!a || !b) return null;
+              const PAD = 24;
+              const minX = Math.min(a.x, b.x) - PAD;
+              const minY = Math.min(a.y, b.y) - PAD;
+              const maxX = Math.max(a.x + COMPACT_W, b.x + COMPACT_W) + PAD;
+              const maxY = Math.max(a.y + COMPACT_H, b.y + COMPACT_H) + PAD;
+              return (
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  style={{
+                    left: minX,
+                    top: minY,
+                    width: maxX - minX,
+                    height: maxY - minY,
+                    borderRadius: 26,
+                    border: "1.5px dashed rgba(217,166,106,0.7)",
+                    background:
+                      "radial-gradient(120% 100% at 30% 18%, rgba(255,250,235,0.55) 0%, rgba(252,250,244,0.32) 60%, rgba(245,242,234,0.18) 100%)",
+                    boxShadow:
+                      "0 0 22px 6px rgba(217,166,106,0.28), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)",
+                  }}
+                />
+              );
+            })()}
+
           {/* Atoms in expanded subtopic + floaters — paint over edges (atoms
               cover edge endpoints visually). Draggable. */}
           {Object.entries(atomRecords).map(([id, rec]) => {
@@ -1885,8 +1918,6 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
               draggingTopicId !== null && rec.topic_id === draggingTopicId;
             const instantSnap =
               followsSubtopicDrag || followsClusterDrag || followsTopicDrag;
-            const haloed =
-              id === draggingAtomId || id === dragHaloTargetId;
             return (
               <DraggableAtom
                 key={id}
@@ -1897,7 +1928,6 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 dimmed={false}
                 fresh={freshAtomIds.has(id)}
                 instant={instantSnap}
-                haloed={haloed}
                 membership={membershipFor(rec)}
                 onDragStartTrigger={() => setDraggingAtomId(id)}
                 onPositionUpdate={(nx, ny) => {
@@ -1912,12 +1942,6 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   });
                 }}
                 onDragEnd={(_e, _info, finalScreenX, finalScreenY) => {
-                  // Capture the halo state at the release moment — if the
-                  // dragged atom was overlapping another floater enough to
-                  // show the glow ring, the user is committing to a
-                  // potential subtopic. No halo means "cancelled".
-                  const halodAtRelease =
-                    dragHaloTargetId !== null && draggingAtomId === id;
                   let droppedAsFloater = false;
                   setAtomRecords((prev) => {
                     const cur = prev[id];
@@ -1947,31 +1971,15 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                       next[id] = { ...next[id], manual: true };
                     }
                     droppedAsFloater = newSt === null;
-                    if (droppedAsFloater) {
-                      // halo at release → cluster-eligible (commit). No halo
-                      // → ineligible (cancel). The same flip applies to the
-                      // overlap target so a halo gesture re-engages a
-                      // previously-cancelled neighbor.
-                      next[id] = {
-                        ...next[id],
-                        clusterEligible: halodAtRelease,
-                      };
-                      if (halodAtRelease && dragHaloTargetId) {
-                        const t = next[dragHaloTargetId];
-                        if (t) {
-                          next[dragHaloTargetId] = {
-                            ...t,
-                            clusterEligible: true,
-                          };
-                        }
-                      }
-                    }
                     return next;
                   });
                   setDraggingAtomId(null);
                   // If the user dropped this as a floater, the dropped atom
                   // is fixed and any overlapping floater / collapsed bubble
-                  // gets pushed away.
+                  // gets pushed away. Proximity-based clustering then catches
+                  // any neighbor still within the 240 px BFS threshold — the
+                  // halo is purely a visual preview during drag, not a
+                  // commit/cancel gate on cluster formation.
                   if (droppedAsFloater) {
                     queueCollisionResolve([`atom:${id}`]);
                   }
@@ -2145,9 +2153,6 @@ interface DraggableAtomProps {
   fresh?: boolean;
   /** When true, snap to position (no animation) — used while parent subtopic is dragging. */
   instant: boolean;
-  /** When true, render the "potential subtopic" glow halo. Set on the atom
-   *  being dragged AND its current overlap target during drag. */
-  haloed?: boolean;
   membership: AtomMembership | null;
   onDragStartTrigger?: () => void;
   onPositionUpdate: (x: number, y: number) => void;
@@ -2167,7 +2172,6 @@ function DraggableAtom({
   dimmed,
   fresh,
   instant,
-  haloed,
   membership,
   onDragStartTrigger,
   onPositionUpdate,
@@ -2262,31 +2266,6 @@ function DraggableAtom({
       animate={{ width: W, height: H, opacity: dimmed ? 0.32 : 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
-      {/* "Potential subtopic" halo — surfaces when this atom is the dragged
-          one OR is the current overlap target. Click-through (no pointer
-          events) and slightly-larger than the atom so it reads as a glow
-          ring around the card. */}
-      {haloed && (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute"
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          style={{
-            left: -14,
-            top: -14,
-            width: W + 28,
-            height: H + 28,
-            borderRadius: 18,
-            background:
-              "radial-gradient(closest-side, rgba(217,166,106,0.35) 0%, rgba(217,166,106,0.18) 55%, rgba(217,166,106,0) 100%)",
-            boxShadow:
-              "0 0 0 1.5px rgba(217,166,106,0.55), 0 0 18px 4px rgba(217,166,106,0.35)",
-          }}
-        />
-      )}
       {showAsCard ? (
         <AtomNode
           atom={atom}
@@ -2589,10 +2568,6 @@ function detectProximityClusters(
   for (const [id, r] of Object.entries(atomRecords)) {
     if (r.subtopic_id !== null) continue;
     if (r.topic_id !== null && excludedTopicIds.has(r.topic_id)) continue;
-    // `clusterEligible === false` means the user has just released this atom
-    // without the overlap halo; treat the gesture as a "cancel" by skipping
-    // the atom in cluster detection until a future drag re-engages it.
-    if (r.clusterEligible === false) continue;
     const key = r.topic_id ?? NULL_KEY;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ id, x: r.x, y: r.y });
