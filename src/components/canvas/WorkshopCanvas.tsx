@@ -396,11 +396,13 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         [prevId, newId].filter((s): s is string => !!s),
       );
 
-      // Regrid prev/new expanded subtopic members (size class flipped)
+      // Regrid prev/new expanded subtopic members (size class flipped). We
+      // look up via the consolidated list (fixture + customSubtopics) so a
+      // freshly crystallized subtopic gets regridded correctly when expanded.
       for (const stid of affected) {
-        const subtopic = overview.topics
-          .flatMap((t) => t.subtopics)
-          .find((s) => s.id === stid);
+        const subtopic = allSubtopicsListRef.current.find(
+          (s: Subtopic) => s.id === stid,
+        );
         if (!subtopic) continue;
         const subPos = subtopicPos[stid] ?? { x: subtopic.x, y: subtopic.y };
         const isExpanded = stid === newId;
@@ -449,6 +451,10 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [panning, setPanning] = useState<{ x: number; y: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("[data-canvas-child]")) return;
+    // Pointer-down on blank canvas (not on a subtopic / atom / cluster):
+    // dismiss any expanded subtopic. The X close button has been removed —
+    // clicking outside is now the canonical way to close the expanded view.
+    if (expandedSubtopicId) expandSubtopic(null);
     setPanning({ x: e.clientX - camera.x, y: e.clientY - camera.y });
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -472,11 +478,16 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [scrolling, setScrolling] = useState(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Wheel must be attached as a NATIVE non-passive listener — React 19
-  // synthetic wheel events are passive, and `e.preventDefault()` on a passive
-  // event throws hundreds of "Unable to preventDefault inside passive event
-  // listener invocation" warnings. We read camera/scrolling from refs so this
-  // listener never needs to re-attach.
+  // Wheel listener is attached to `window` (not the canvas div) for two
+  // reasons:
+  //   1. React 19 synthetic wheel events are passive, so `e.preventDefault()`
+  //      on `onWheel` throws warnings — a native non-passive listener is
+  //      required to actually block browser page-zoom on pinch.
+  //   2. The header (z-30, position:absolute) is a SIBLING of the canvas
+  //      container, NOT a descendant — so a pinch over the header would
+  //      bypass a container-level listener and trigger the browser's default
+  //      page zoom. A window-level listener catches it regardless of target.
+  // We read camera/scrolling from refs so this never needs to re-attach.
   const cameraRef = useRef(camera);
   cameraRef.current = camera;
   const scrollingRef = useRef(scrolling);
@@ -485,9 +496,15 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     const el = containerRef.current;
     if (!el) return;
     const handler = (e: WheelEvent) => {
-      e.preventDefault();
       const cam = cameraRef.current;
       if (e.ctrlKey) {
+        // Pinch zoom — ALWAYS prevent the browser's page-zoom default,
+        // regardless of where the gesture lands.
+        e.preventDefault();
+        // Apply canvas zoom only if the gesture is over the canvas. (Pinch
+        // over the header etc. is silently absorbed — better than the
+        // browser zooming the whole UI.)
+        if (!el.contains(e.target as Node)) return;
         const rect = el.getBoundingClientRect();
         const cx = e.clientX - rect.left;
         const cy = e.clientY - rect.top;
@@ -500,6 +517,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           y: cy - (cy - cam.y) * ratio,
         });
       } else {
+        // Two-finger pan / mouse wheel — only intercept when the gesture is
+        // over the canvas. Otherwise let the event bubble (so e.g. the
+        // Insights drawer can scroll its content normally).
+        if (!el.contains(e.target as Node)) return;
+        e.preventDefault();
         const PAN_MULT = 1.4;
         setCamera({
           x: cam.x - e.deltaX * PAN_MULT,
@@ -510,8 +532,8 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
       scrollTimeoutRef.current = setTimeout(() => setScrolling(false), 120);
     };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
+    window.addEventListener("wheel", handler, { passive: false });
+    return () => window.removeEventListener("wheel", handler);
   }, [setCamera]);
 
   useEffect(() => () => {
@@ -627,12 +649,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         if (el) {
           const r = el.getBoundingClientRect();
           if (within(screenX, screenY, r, STICKY_SUB_PAD)) {
-            const sub = overview.topics
-              .flatMap((t) => t.subtopics)
-              .find((s) => s.id === currentSubtopicId);
+            // Use effective membership (handles custom subtopics + override).
             return {
               subtopic_id: currentSubtopicId,
-              topic_id: sub?.topic_id ?? null,
+              topic_id:
+                subtopicMembershipRef.current[currentSubtopicId] ?? null,
             };
           }
         }
@@ -651,10 +672,10 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         }
       }
       if (best) {
-        const sub = overview.topics
-          .flatMap((t) => t.subtopics)
-          .find((s) => s.id === best!.sid);
-        return { subtopic_id: best.sid, topic_id: sub?.topic_id ?? null };
+        return {
+          subtopic_id: best.sid,
+          topic_id: subtopicMembershipRef.current[best.sid] ?? null,
+        };
       }
 
       // 3. Sticky to current topic with extended bbox
@@ -691,9 +712,9 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       if (!overview) return records;
       const next = { ...records };
       for (const stid of subtopicIds) {
-        const subtopic = overview.topics
-          .flatMap((t) => t.subtopics)
-          .find((s) => s.id === stid);
+        // Look up via consolidated list (fixture + custom) so regrid works
+        // for crystallized subtopics too.
+        const subtopic = allSubtopicsList.find((s) => s.id === stid);
         if (!subtopic) continue;
         const subPos = subtopicPos[stid] ?? { x: subtopic.x, y: subtopic.y };
         const isExpanded = stid === expandedSubtopicId;
@@ -708,7 +729,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       }
       return next;
     },
-    [overview, expandedSubtopicId, subtopicPos],
+    [overview, expandedSubtopicId, subtopicPos, allSubtopicsList],
   );
 
   // -------------------- Subtopic drag --------------------
@@ -869,11 +890,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     const pending = topicPanPendingRef.current;
     topicPanPendingRef.current = null;
     if (pending && overview) {
-      const memberSubIds = new Set(
-        overview.topics
-          .find((t) => t.id === pending.tid)
-          ?.subtopics.map((s) => s.id) ?? [],
-      );
+      const membership = subtopicMembershipRef.current;
+      const memberSubIds = new Set<string>();
+      for (const sid in membership) {
+        if (membership[sid] === pending.tid) memberSubIds.add(sid);
+      }
       setSubtopicPos((prev) => {
         const next = { ...prev };
         for (const sid in next) {
@@ -909,12 +930,23 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    * atom record (subtopic-bound OR floater) whose topic_id matches by the
    * same canvas-coord delta. The topic vessel recomputes from these.
    *
+   * Member subtopics are derived from `subtopicMembership` (read via ref so
+   * the callback identity stays stable), NOT from the fixture topic's
+   * `subtopics` array — that array misses (a) custom subtopics created via
+   * crystallize and (b) subtopics dragged into this topic via override.
+   *
    * Pan deltas are accumulated in a ref and flushed on rAF — without this,
    * each onPan synchronously runs setState → render → layout shift, which
    * causes the browser to dispatch synthetic pointermoves that trigger more
    * onPan calls. The result is a feedback loop that drives ~100 onPan
    * calls/sec and starves the eventual pointerup, locking the page.
    */
+  const subtopicMembershipRef = useRef(subtopicMembership);
+  subtopicMembershipRef.current = subtopicMembership;
+  // Consolidated subtopic list (fixture + custom) read via ref so callbacks
+  // and useEffects without it in their dep array still see the latest value.
+  const allSubtopicsListRef = useRef(allSubtopicsList);
+  allSubtopicsListRef.current = allSubtopicsList;
   const topicPanPendingRef = useRef<{ tid: string; dx: number; dy: number } | null>(
     null,
   );
@@ -939,11 +971,11 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         const p = topicPanPendingRef.current;
         if (!p) return;
         topicPanPendingRef.current = null;
-        const memberSubIds = new Set(
-          overview.topics
-            .find((t) => t.id === p.tid)
-            ?.subtopics.map((s) => s.id) ?? [],
-        );
+        const membership = subtopicMembershipRef.current;
+        const memberSubIds = new Set<string>();
+        for (const sid in membership) {
+          if (membership[sid] === p.tid) memberSubIds.add(sid);
+        }
         setSubtopicPos((prev) => {
           const next = { ...prev };
           for (const sid in next) {
@@ -1006,8 +1038,12 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    * tried `useDeferredValue` for perf, but that made the bubble lag behind
    * the notes during drag.)
    */
+  const customTopicIds = useMemo(
+    () => new Set(customTopics.map((t) => t.id)),
+    [customTopics],
+  );
   const clusters = useMemo(() => {
-    const proximity = detectProximityClusters(atomRecords, 240);
+    const proximity = detectProximityClusters(atomRecords, 240, customTopicIds);
     const insightsList = insights?.convergence_candidates ?? [];
     return proximity.map((c) => {
       const recs = c.ids.map((id) => atomRecords[id]).filter(Boolean);
@@ -1034,7 +1070,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         maxY,
       };
     });
-  }, [atomRecords, insights]);
+  }, [atomRecords, insights, customTopicIds]);
 
   // -------------------- Cluster drag + crystallize handlers --------------------
 
@@ -1515,6 +1551,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 <SubtopicBubble
                   subtopic={s}
                   atoms={memberAtoms}
+                  reactions={reactions}
                   expanded={false}
                   onExpand={(id) => expandSubtopic(id)}
                   dimmed={tourDimmed || expandDimmed}
@@ -1523,51 +1560,12 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
             );
           })}
 
-          {/* Atoms inside collapsed subtopics — preview dots, painted UNDER
-              the expanded bubble (they're earlier in DOM). Dimmed when there
-              IS an expanded subtopic. Not draggable (user can't tell which dot
-              is which). */}
-          {Object.entries(atomRecords).map(([id, rec]) => {
-            if (rec.subtopic_id === null) return null;
-            if (rec.subtopic_id === expandedSubtopicId) return null;
-            const atom = allAtomsById[id];
-            if (!atom) return null;
-            const followsSubtopicDrag =
-              rec.subtopic_id !== null &&
-              rec.subtopic_id === draggingSubtopicId;
-            const followsClusterDrag =
-              draggingClusterMemberIds?.includes(id) ?? false;
-            const followsTopicDrag =
-              draggingTopicId !== null && rec.topic_id === draggingTopicId;
-            const instantSnap =
-              followsSubtopicDrag || followsClusterDrag || followsTopicDrag;
-            return (
-              <DraggableAtom
-                key={id}
-                atom={atom}
-                position={rec}
-                showAsCard={false}
-                draggable={false}
-                dimmed={!!expandedSubtopic}
-                fresh={freshAtomIds.has(id)}
-                instant={instantSnap}
-                membership={null}
-                onPositionUpdate={() => {}}
-                onDragEnd={() => {}}
-              />
-            );
-          })}
-
-          {/* Edges between two collapsed-subtopic atoms — paint under expanded
-              bubble; dimmed when expansion active. */}
-          <ReactionLayer
-            reactions={reactions}
-            atomRecords={atomRecords}
-            allAtomsById={allAtomsById}
-            expandedSubtopicId={expandedSubtopicId}
-            mode="collapsed-only"
-            baseOpacity={expandedSubtopicId ? 0.22 : 1}
-          />
+          {/* Note: collapsed-subtopic atoms (preview dots) AND their intra-
+              subtopic reaction curves are now rendered INSIDE SubtopicBubble
+              as children of its motion.div, so they inherit the bubble's
+              transform during any drag (no setState round-trip lag). The
+              prior canvas-sibling DraggableAtom rendering + ReactionLayer
+              "collapsed-only" pass have been removed for that reason. */}
 
           {/* Expanded subtopic — paints over collapsed stuff */}
           {expandedSubtopic &&
@@ -1596,23 +1594,23 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   <SubtopicBubble
                     subtopic={s}
                     atoms={memberAtoms}
+                    reactions={reactions}
                     expanded
-                    onCollapse={() => expandSubtopic(null)}
                     dimmed={false}
                   />
                 </DraggableSubtopic>
               );
             })()}
 
-          {/* Edges involving expanded subtopic atoms or floaters — paint over
-              expanded bubble. */}
+          {/* Edges between two atoms inside the EXPANDED subtopic — drawn at
+              workshop coords (atoms are full compact cards in expanded mode).
+              Edges between collapsed-subtopic atoms are drawn inside the
+              bubble itself by SubtopicBubble. */}
           <ReactionLayer
             reactions={reactions}
             atomRecords={atomRecords}
             allAtomsById={allAtomsById}
             expandedSubtopicId={expandedSubtopicId}
-            mode="active"
-            baseOpacity={1}
           />
 
           {/* Atoms in expanded subtopic + floaters — paint over edges (atoms
@@ -2035,21 +2033,11 @@ function ReactionLayer({
   atomRecords,
   allAtomsById,
   expandedSubtopicId,
-  mode,
-  baseOpacity,
 }: {
   reactions: Reaction[];
   atomRecords: Record<string, AtomRecord>;
   allAtomsById: Record<string, Atom>;
   expandedSubtopicId: string | null;
-  /**
-   *  - "collapsed-only": keep only edges where BOTH endpoints are atoms in
-   *    a non-expanded subtopic (paint under the expanded bubble, dimmed)
-   *  - "active": keep edges where AT LEAST ONE endpoint is in the expanded
-   *    subtopic OR is a floater (paint over the expanded bubble)
-   */
-  mode: "collapsed-only" | "active";
-  baseOpacity: number;
 }) {
   const bounds = useMemo(() => {
     let minX = -200, minY = -200, maxX = 2200, maxY = 1800;
@@ -2065,13 +2053,9 @@ function ReactionLayer({
   function atomCenter(id: string) {
     const rec = atomRecords[id];
     if (!rec) return null;
-    const isExpanded =
-      rec.subtopic_id !== null && rec.subtopic_id === expandedSubtopicId;
-    const isFloater = rec.subtopic_id === null;
-    const showAsCard = isExpanded || isFloater;
-    const W = showAsCard ? COMPACT_W : PREVIEW_W;
-    const H = showAsCard ? COMPACT_H : PREVIEW_H;
-    return { x: rec.x + W / 2, y: rec.y + H / 2 };
+    // Edges drawn here are always between expanded-subtopic atoms (compact
+    // cards). Collapsed-subtopic edges live inside SubtopicBubble.
+    return { x: rec.x + COMPACT_W / 2, y: rec.y + COMPACT_H / 2 };
   }
 
   return (
@@ -2087,7 +2071,7 @@ function ReactionLayer({
       width={bounds.w}
       height={bounds.h}
     >
-      <g opacity={baseOpacity}>
+      <g>
         {reactions
           .filter((r) => r.status !== "dismissed")
           .map((r) => {
@@ -2095,9 +2079,7 @@ function ReactionLayer({
             const toRec = atomRecords[r.to_atom_id];
             if (!fromRec || !toRec) return null;
             // Strict: edges only exist between two atoms in the SAME non-null
-            // subtopic. Floaters and cross-subtopic atoms have no edges drawn
-            // (when an atom is dragged out of its subtopic, all connections
-            // automatically disappear).
+            // subtopic. Floaters and cross-subtopic atoms get no edges.
             if (
               !fromRec.subtopic_id ||
               !toRec.subtopic_id ||
@@ -2105,12 +2087,10 @@ function ReactionLayer({
             ) {
               return null;
             }
-            // Mode-based layering: both endpoints in the same subtopic, so
-            // they share an expansion state.
-            const inExpanded = fromRec.subtopic_id === expandedSubtopicId;
-            const bothCollapsed = !inExpanded;
-            if (mode === "collapsed-only" && !bothCollapsed) return null;
-            if (mode === "active" && bothCollapsed) return null;
+            // Only render edges between EXPANDED-subtopic atoms here.
+            // Collapsed-subtopic edges are drawn inside SubtopicBubble so they
+            // inherit the bubble's transform (no setState round-trip lag).
+            if (fromRec.subtopic_id !== expandedSubtopicId) return null;
 
             const a = atomCenter(r.from_atom_id);
             const b = atomCenter(r.to_atom_id);
@@ -2266,10 +2246,17 @@ function clamp(v: number, lo: number, hi: number) {
  * proximity. Atoms within `threshold` px of each other (BFS-connected) and
  * sharing the same topic_id (including both null) form one cluster. Singletons
  * are not returned — clusters require ≥ 2 members.
+ *
+ * `excludedTopicIds` skips atoms whose `topic_id` is a custom (crystallized)
+ * topic. After a Topic Cluster crystallizes into a Topic, its members become
+ * settled "points inside a Topic" and should NOT be re-wrapped in a
+ * subtopic-candidate cluster — they're waiting for new atoms to combine into
+ * a future Topic, not for an internal subdivision.
  */
 function detectProximityClusters(
   atomRecords: Record<string, AtomRecord>,
   threshold: number,
+  excludedTopicIds: Set<string>,
 ): Array<{ ids: string[]; topic_id: string | null }> {
   const NULL_KEY = "__null__";
   const groups = new Map<
@@ -2278,6 +2265,7 @@ function detectProximityClusters(
   >();
   for (const [id, r] of Object.entries(atomRecords)) {
     if (r.subtopic_id !== null) continue;
+    if (r.topic_id !== null && excludedTopicIds.has(r.topic_id)) continue;
     const key = r.topic_id ?? NULL_KEY;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ id, x: r.x, y: r.y });

@@ -94,7 +94,7 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
   - Atom workspace: 6 atoms in a non-overlapping grid, with reaction edges (support green / challenge red zigzag / build-on blue arrow / question amber dashed `?` / cite violet)
 - [ ] Drag any atom → SVG edges follow live. No wobble. No stutter
 - [ ] Drag an atom outside the bubble (~> 60 px past the edge) → it pops out, becomes a floater. Reactions to it disappear (only in-subtopic edges shown)
-- [ ] Press `ESC` or click ✕ → bubble morphs back to 220×150
+- [ ] Press `ESC` OR click any blank canvas area → bubble morphs back to 220×150 (the X close button has been removed by user direction)
 
 #### Subtopic drag ([CLAUDE.md §3](CLAUDE.md))
 

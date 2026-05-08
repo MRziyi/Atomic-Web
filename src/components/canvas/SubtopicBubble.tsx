@@ -3,34 +3,35 @@
  *
  *   collapsed (220×150):
  *     - title band on top
- *     - empty atom band below (atoms render as workshop-canvas siblings as
- *       small "preview" dots inside this band)
+ *     - topology preview band below — atom dots + intra-subtopic reaction
+ *       curves rendered as CHILDREN of this bubble (so they inherit the
+ *       bubble's transform and stay perfectly synced during any drag)
  *
  *   expanded (720×500):
- *     - title band on top (with × close)
+ *     - title band on top
  *     - framing / open-questions / literature band beneath
  *     - empty atom workspace below (atoms render as workshop-canvas siblings
- *       as full sticky-note cards)
+ *       as full sticky-note cards — sibling-mode keeps drag-out-of-bubble
+ *       possible)
  *
- * Critical invariant: this component is the SAME element in both states. We
- * morph width/height with framer-motion so the topology preview becomes the
- * real content with no overlay/modal. Atoms are NOT children of this bubble —
- * they live on the canvas and are positioned via the math in WorkshopCanvas to
- * fall inside this bubble's bounds. That keeps drag-out-of-bubble possible.
+ * Critical invariant: this component is the SAME element in both states.
+ * width/height morph via framer-motion. The collapsed-state dots+curves are
+ * the ONLY rendering of those atoms — WorkshopCanvas does not paint preview
+ * dots as canvas siblings any more.
  */
 
 "use client";
 
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
 import { useMemo } from "react";
 import * as RT from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/cn";
 import { ContributorDots } from "@/components/ui/contributor-dots";
 import { MaturityMeter } from "@/components/ui/maturity-meter";
 import { colorOfAuthor } from "@/lib/api/fixtures";
+import { ReactionEdge } from "./ReactionEdge";
 import { wasAtomRecentlyDragged } from "./atom-drag-guard";
-import type { Atom, Subtopic, User } from "@/lib/types";
+import type { Atom, Reaction, Subtopic, User } from "@/lib/types";
 
 // --- Geometry constants — must mirror WorkshopCanvas atom-position math ---
 
@@ -46,26 +47,100 @@ export const EXPANDED_TEXT_BAND = 134;
 export const BUBBLE_PAD_X = 16;
 export const BUBBLE_PAD_BOTTOM = 14;
 
+export const PREVIEW_W = 18;
+export const PREVIEW_H = 18;
+export const COMPACT_W = 162;
+export const COMPACT_H = 96;
+
+const USER_COLOR_HEX: Record<User["color_token"], string> = {
+  rose: "#D88B95",
+  sage: "#8FB69C",
+  ocean: "#7FA0BB",
+  amber: "#D9A66A",
+  violet: "#A292BF",
+  clay: "#C29375",
+  you: "#5C6B73",
+};
+
+/**
+ * Lay out N items in a balanced grid inside a (W × H) box, with each item
+ * sized (aw × ah). Returns the local top-left of item #idx. Identical math
+ * to WorkshopCanvas.gridLocal — duplicated here intentionally so the bubble
+ * can render its own topology preview without a circular import.
+ */
+export function gridLocal(
+  idx: number,
+  total: number,
+  W: number,
+  H: number,
+  aw: number,
+  ah: number,
+): { x: number; y: number } {
+  if (total <= 0) return { x: 0, y: 0 };
+  const aspect = W / Math.max(1, H);
+  const ideal = Math.sqrt(total * aspect);
+  const maxCols = Math.max(1, Math.floor(W / (aw + 4)));
+  const cols = Math.max(1, Math.min(total, maxCols, Math.round(ideal)));
+  const rows = Math.ceil(total / cols);
+  const cellW = W / cols;
+  const cellH = H / rows;
+  const c = idx % cols;
+  const r = Math.floor(idx / cols);
+  const inThisRow = r === rows - 1 ? total - r * cols : cols;
+  const horizontalOffset = ((cols - inThisRow) * cellW) / 2;
+  return {
+    x: horizontalOffset + c * cellW + (cellW - aw) / 2,
+    y: r * cellH + (cellH - ah) / 2,
+  };
+}
+
 interface SubtopicBubbleProps {
   subtopic: Subtopic;
   atoms: Atom[];
+  /** Reactions in this workshop. Filtered internally to those whose endpoints
+   *  are both members of this subtopic — used to draw the topology preview. */
+  reactions: Reaction[];
   expanded: boolean;
   onExpand?: (id: string) => void;
-  onCollapse?: () => void;
   dimmed?: boolean;
 }
 
 export function SubtopicBubble({
   subtopic,
   atoms,
+  reactions,
   expanded,
   onExpand,
-  onCollapse,
   dimmed,
 }: SubtopicBubbleProps) {
   const W = expanded ? EXPANDED_W : COLLAPSED_W;
   const H = expanded ? EXPANDED_H : COLLAPSED_H;
   const titleBand = expanded ? EXPANDED_TITLE_BAND : COLLAPSED_TITLE_BAND;
+
+  // Stable topology layout for the collapsed preview. Sorted-by-id keeps the
+  // assignment of dot-slot to atom deterministic across re-renders.
+  const previewLayout = useMemo(() => {
+    if (expanded || atoms.length === 0) return null;
+    const sorted = [...atoms].sort((a, b) => a.id.localeCompare(b.id));
+    const bandW = COLLAPSED_W - BUBBLE_PAD_X * 2;
+    const bandH = COLLAPSED_H - COLLAPSED_TITLE_BAND - BUBBLE_PAD_BOTTOM;
+    const positions: Record<string, { x: number; y: number }> = {};
+    sorted.forEach((a, idx) => {
+      const local = gridLocal(idx, sorted.length, bandW, bandH, PREVIEW_W, PREVIEW_H);
+      positions[a.id] = local;
+    });
+    return { sorted, bandW, bandH, positions };
+  }, [expanded, atoms]);
+
+  const previewReactions = useMemo(() => {
+    if (!previewLayout) return [];
+    return reactions.filter(
+      (r) =>
+        r.status !== "dismissed" &&
+        previewLayout.positions[r.from_atom_id] &&
+        previewLayout.positions[r.to_atom_id],
+    );
+  }, [previewLayout, reactions]);
 
   const metrics = useMemo(() => {
     const litCount = atoms.filter((a) => a.kind === "literature").length;
@@ -188,19 +263,6 @@ export function SubtopicBubble({
                 {expanded && <ContributorDots colors={metrics.voiceColors} />}
               </div>
             </div>
-            {expanded && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCollapse?.();
-                }}
-                className="rounded-full p-1 text-ink-3 hover:bg-line hover:text-ink"
-                aria-label="Collapse subtopic"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
           {/* TEXT BAND (expanded only) ---------------------------------- */}
@@ -287,7 +349,57 @@ export function SubtopicBubble({
             </motion.div>
           )}
 
-          {/* ATOM BAND — left empty, atoms render as canvas siblings ---- */}
+          {/* TOPOLOGY PREVIEW (collapsed) — dots + intra-subtopic reaction
+              curves rendered as CHILDREN of the bubble so they inherit the
+              same transform during any drag. Hidden during expansion (atoms
+              are rendered as full compact cards by WorkshopCanvas). */}
+          {!expanded && previewLayout && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute"
+              style={{
+                left: BUBBLE_PAD_X,
+                top: COLLAPSED_TITLE_BAND,
+                width: previewLayout.bandW,
+                height: previewLayout.bandH,
+              }}
+            >
+              {previewReactions.length > 0 && (
+                <svg
+                  className="absolute inset-0 overflow-visible"
+                  width={previewLayout.bandW}
+                  height={previewLayout.bandH}
+                >
+                  {previewReactions.map((r) => {
+                    const f = previewLayout.positions[r.from_atom_id];
+                    const t = previewLayout.positions[r.to_atom_id];
+                    return (
+                      <ReactionEdge
+                        key={r.id}
+                        id={r.id}
+                        from={{ x: f.x + PREVIEW_W / 2, y: f.y + PREVIEW_H / 2 }}
+                        to={{ x: t.x + PREVIEW_W / 2, y: t.y + PREVIEW_H / 2 }}
+                        kind={r.kind}
+                        ghost={r.origin === "ai_suggested"}
+                      />
+                    );
+                  })}
+                </svg>
+              )}
+              {previewLayout.sorted.map((atom) => {
+                const p = previewLayout.positions[atom.id];
+                return (
+                  <span
+                    key={atom.id}
+                    className="absolute"
+                    style={{ left: p.x, top: p.y, width: PREVIEW_W, height: PREVIEW_H }}
+                  >
+                    <PreviewDot atom={atom} />
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
       </RT.Trigger>
 
@@ -323,5 +435,51 @@ export function SubtopicBubble({
         </RT.Portal>
       )}
     </RT.Root>
+  );
+}
+
+// ============================================================
+// PreviewDot — tiny atom marker shown inside the collapsed bubble.
+// ============================================================
+
+function PreviewDot({ atom }: { atom: Atom }) {
+  if (atom.kind === "literature") {
+    return (
+      <span
+        className="block h-full w-full rounded-[3px] bg-ink"
+        style={{
+          boxShadow:
+            "0 1px 1px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.08)",
+        }}
+      >
+        <span className="block h-full w-[3px] bg-paper opacity-40" />
+      </span>
+    );
+  }
+  if (atom.kind === "ai") {
+    return (
+      <span
+        className="block h-full w-full rounded-full border border-dashed bg-bg-elev"
+        style={{
+          borderColor: "rgba(160,155,146,0.7)",
+          boxShadow:
+            "0 1px 1px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}
+      />
+    );
+  }
+  const fill =
+    USER_COLOR_HEX[
+      colorOfAuthor((atom as Extract<Atom, { kind: "human" }>).author_id)
+    ];
+  return (
+    <span
+      className="block h-full w-full rounded-[4px]"
+      style={{
+        backgroundColor: fill,
+        boxShadow:
+          "0 1px 1px rgba(0,0,0,0.08), 1px 2px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.4)",
+      }}
+    />
   );
 }
