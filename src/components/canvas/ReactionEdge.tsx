@@ -28,16 +28,32 @@ const COLOR_BY_KIND: Record<ReactionKind, string> = {
   cite: "#8B6FB5",
 };
 
-/** Hover-tooltip copy for each reaction kind. Surfaces via SVG <title> so the
- *  browser's native tooltip appears after the OS hover delay — matches the
- *  paper-canvas aesthetic without needing extra DOM. */
-const TOOLTIP_BY_KIND: Record<ReactionKind, string> = {
-  support: "Support — agrees with / reinforces this atom",
-  challenge: "Challenge — disagrees with / pushes back on this atom",
-  build_on: "Build-on — extends or expands on this atom",
-  question: "Question — raises a question about this atom",
-  cite: "Cite — backs the claim with literature",
+/** Hover-tooltip copy for each reaction kind. Surfaced via a custom React
+ *  overlay (see WorkshopCanvas.tsx `edgeTooltip`) so the user gets immediate
+ *  feedback — the native SVG `<title>` element waits ~500 ms for the OS
+ *  hover delay, which felt sluggish for a research-paced canvas. */
+export const REACTION_KIND_LABEL: Record<ReactionKind, string> = {
+  support: "Support",
+  challenge: "Challenge",
+  build_on: "Build-on",
+  question: "Question",
+  cite: "Cite",
 };
+
+export const REACTION_KIND_DESC: Record<ReactionKind, string> = {
+  support: "agrees with / reinforces this atom",
+  challenge: "disagrees with / pushes back on this atom",
+  build_on: "extends or expands on this atom",
+  question: "raises a question about this atom",
+  cite: "backs the claim with literature",
+};
+
+export interface ReactionEdgeHoverInfo {
+  kind: ReactionKind;
+  ghost: boolean;
+  clientX: number;
+  clientY: number;
+}
 
 interface ReactionEdgeProps {
   from: { x: number; y: number };
@@ -47,6 +63,10 @@ interface ReactionEdgeProps {
   /** When true, the edge gets a slightly thicker stroke (selected endpoint). */
   emphasized?: boolean;
   id?: string;
+  /** Fires while the cursor is over the edge's invisible hit-target. Pass
+   *  `null` on leave. WorkshopCanvas renders the tooltip overlay from this
+   *  signal (custom — no native delay). */
+  onHover?: (info: ReactionEdgeHoverInfo | null) => void;
 }
 
 export function ReactionEdge({
@@ -56,6 +76,7 @@ export function ReactionEdge({
   ghost,
   emphasized,
   id,
+  onHover,
 }: ReactionEdgeProps) {
   const color = COLOR_BY_KIND[kind];
   const opacity = ghost ? 0.4 : 1;
@@ -98,10 +119,10 @@ export function ReactionEdge({
         </marker>
       </defs>
       <g data-edge-id={id}>
-        {/* Invisible wide hit-target. SVG `<title>` is only surfaced as a
-            tooltip when the user hovers the element that contains it — Chrome
-            does NOT walk up to the parent <g>. The title MUST be a direct
-            child of the path that actually receives hover. */}
+        {/* Invisible wide hit-target — `pointerEvents: stroke` plus a 14 px
+            stroke gives the user a forgiving hover area. The hover state is
+            lifted up via `onHover` so WorkshopCanvas can render its own
+            tooltip overlay (no OS hover delay). */}
         <path
           d={path}
           fill="none"
@@ -110,13 +131,30 @@ export function ReactionEdge({
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{ pointerEvents: "stroke", cursor: "help" }}
-        >
-          <title>
-            {ghost
-              ? `${TOOLTIP_BY_KIND[kind]} (AI suggested — pending review)`
-              : TOOLTIP_BY_KIND[kind]}
-          </title>
-        </path>
+          onPointerEnter={
+            onHover
+              ? (e) =>
+                  onHover({
+                    kind,
+                    ghost: !!ghost,
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                  })
+              : undefined
+          }
+          onPointerMove={
+            onHover
+              ? (e) =>
+                  onHover({
+                    kind,
+                    ghost: !!ghost,
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                  })
+              : undefined
+          }
+          onPointerLeave={onHover ? () => onHover(null) : undefined}
+        />
         <path
           d={path}
           fill="none"

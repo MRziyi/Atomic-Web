@@ -33,7 +33,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AtomNode, type AtomMembership } from "./AtomNode";
-import { ReactionEdge } from "./ReactionEdge";
+import {
+  REACTION_KIND_DESC,
+  REACTION_KIND_LABEL,
+  ReactionEdge,
+  type ReactionEdgeHoverInfo,
+} from "./ReactionEdge";
 import {
   BUBBLE_PAD_BOTTOM,
   BUBBLE_PAD_X,
@@ -155,6 +160,13 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    *  the same topic and render a glow ring on both the dragged atom and the
    *  overlap target. */
   const [draggingAtomId, setDraggingAtomId] = useState<string | null>(null);
+  /** Hover state for reaction-edge tooltip — set by ReactionEdge's pointer
+   *  handlers via ReactionLayer's `onEdgeHover` callback. Rendered at the
+   *  end of the workshop's outer wrapper (fixed position, outside the
+   *  camera transform) so it follows the cursor with no native delay. */
+  const [edgeHover, setEdgeHover] = useState<ReactionEdgeHoverInfo | null>(
+    null,
+  );
 
   /**
    * Per-subtopic override of fixture topic_id. Lets the user drag a subtopic
@@ -1217,10 +1229,12 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
    * tried `useDeferredValue` for perf, but that made the bubble lag behind
    * the notes during drag.)
    */
-  const customTopicIds = useMemo(
-    () => new Set(customTopics.map((t) => t.id)),
-    [customTopics],
-  );
+  // (Earlier this set was passed to `detectProximityClusters` to skip atoms
+  //  inside custom topics. Removed: the user expects "drag two atoms together
+  //  → subtopic cluster" to work uniformly in fixture AND custom topics.
+  //  Crystallize-as-Topic now places members far enough apart that they
+  //  don't auto-cluster on placement; user can drag them closer to trigger
+  //  clustering.)
 
   /**
    * "Potential-subtopic" overlap halo target. While the user is dragging an
@@ -1271,7 +1285,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   }, [draggingAtomId, atomRecords]);
 
   const clusters = useMemo(() => {
-    const proximity = detectProximityClusters(atomRecords, 240, customTopicIds);
+    const proximity = detectProximityClusters(atomRecords, 240);
     const insightsList = insights?.convergence_candidates ?? [];
     return proximity.map((c) => {
       const recs = c.ids.map((id) => atomRecords[id]).filter(Boolean);
@@ -1298,7 +1312,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         maxY,
       };
     });
-  }, [atomRecords, insights, customTopicIds]);
+  }, [atomRecords, insights]);
 
   // -------------------- Cluster drag + crystallize handlers --------------------
 
@@ -1526,11 +1540,20 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         // As Topic: spread members in a centered grid (so they don't stack
         // visually inside the new vessel), then size the topic vessel to
         // enclose the spread + padding.
+        //
+        // HGAP / VGAP are sized so center-to-center distance between any
+        // two members is > 240 px (the proximity-cluster BFS threshold).
+        // This means crystallize-as-Topic does NOT instantly re-wrap the
+        // members in a subtopic-candidate cluster on placement — the
+        // "settled points inside a Topic, awaiting future combinations"
+        // user intent. The cluster mechanism still works in this topic if
+        // the user manually drags two atoms closer (see the `dragHaloTargetId`
+        // halo gesture).
         const sortedMembers = [...memberIds].sort();
         const cols = Math.max(1, Math.ceil(Math.sqrt(sortedMembers.length)));
         const rows = Math.ceil(sortedMembers.length / cols);
-        const HGAP = 32; // breathing room between cards
-        const VGAP = 32;
+        const HGAP = 110; // 162 + 110 = 272 > 240 px proximity threshold
+        const VGAP = 160; //  96 + 160 = 256 > 240
         const cellW = COMPACT_W + HGAP;
         const cellH = COMPACT_H + VGAP;
         // Total grid footprint (no trailing gap on the last col/row).
@@ -1882,6 +1905,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
             atomRecords={atomRecords}
             allAtomsById={allAtomsById}
             expandedSubtopicId={expandedSubtopicId}
+            onEdgeHover={setEdgeHover}
           />
 
           {/* Drag-overlap halo — a single dashed amber squircle that frames
@@ -2067,6 +2091,34 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         workshopId={workshopId}
         computeLandingScreenPos={computeLandingScreenPos}
       />
+
+      {/* Custom reaction-edge tooltip — fixed-position so it follows the
+          cursor and isn't subject to the camera transform; rendered last so
+          it stacks above every other workshop UI. Replaces the SVG <title>
+          fallback (which had ~500 ms OS hover delay). */}
+      {edgeHover && (
+        <div
+          className="pointer-events-none fixed z-[100]"
+          style={{
+            left: Math.min(edgeHover.clientX + 14, window.innerWidth - 240),
+            top: Math.min(edgeHover.clientY + 16, window.innerHeight - 64),
+          }}
+        >
+          <div className="rounded-md border border-line bg-bg-elev/95 px-2.5 py-1.5 shadow-atom-2 backdrop-blur-[2px]">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-ink-4">
+              {REACTION_KIND_LABEL[edgeHover.kind]}
+              {edgeHover.ghost && (
+                <span className="ml-1.5 text-ink-3 normal-case tracking-normal">
+                  · AI suggested
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
+              {REACTION_KIND_DESC[edgeHover.kind]}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2401,11 +2453,13 @@ function ReactionLayer({
   atomRecords,
   allAtomsById,
   expandedSubtopicId,
+  onEdgeHover,
 }: {
   reactions: Reaction[];
   atomRecords: Record<string, AtomRecord>;
   allAtomsById: Record<string, Atom>;
   expandedSubtopicId: string | null;
+  onEdgeHover?: (info: ReactionEdgeHoverInfo | null) => void;
 }) {
   const bounds = useMemo(() => {
     let minX = -200, minY = -200, maxX = 2200, maxY = 1800;
@@ -2474,6 +2528,7 @@ function ReactionLayer({
                 to={{ x: b.x - bounds.minX, y: b.y - bounds.minY }}
                 kind={r.kind}
                 ghost={r.origin === "ai_suggested"}
+                onHover={onEdgeHover}
               />
             );
           })}
@@ -2615,16 +2670,17 @@ function clamp(v: number, lo: number, hi: number) {
  * sharing the same topic_id (including both null) form one cluster. Singletons
  * are not returned — clusters require ≥ 2 members.
  *
- * `excludedTopicIds` skips atoms whose `topic_id` is a custom (crystallized)
- * topic. After a Topic Cluster crystallizes into a Topic, its members become
- * settled "points inside a Topic" and should NOT be re-wrapped in a
- * subtopic-candidate cluster — they're waiting for new atoms to combine into
- * a future Topic, not for an internal subdivision.
+ * Cluster detection is uniform across fixture and custom (crystallized)
+ * topics. To prevent freshly-crystallized topics from immediately auto-
+ * wrapping themselves in a subtopic candidate, `onClusterCrystallize`
+ * places members far enough apart (`HGAP`/`VGAP` chosen so center-to-
+ * center > 240 px) that proximity doesn't fire on placement. The user
+ * can then drag two atoms inside the custom topic closer to trigger a
+ * subtopic cluster gesture.
  */
 function detectProximityClusters(
   atomRecords: Record<string, AtomRecord>,
   threshold: number,
-  excludedTopicIds: Set<string>,
 ): Array<{ ids: string[]; topic_id: string | null }> {
   const NULL_KEY = "__null__";
   const groups = new Map<
@@ -2633,7 +2689,6 @@ function detectProximityClusters(
   >();
   for (const [id, r] of Object.entries(atomRecords)) {
     if (r.subtopic_id !== null) continue;
-    if (r.topic_id !== null && excludedTopicIds.has(r.topic_id)) continue;
     const key = r.topic_id ?? NULL_KEY;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ id, x: r.x, y: r.y });
