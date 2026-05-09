@@ -28,7 +28,7 @@ import * as RT from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/cn";
 import { ContributorDots } from "@/components/ui/contributor-dots";
 import { MaturityMeter } from "@/components/ui/maturity-meter";
-import { colorOfAuthor } from "@/lib/api/fixtures";
+import { colorOfAuthor, userById } from "@/lib/api/fixtures";
 import { ReactionEdge } from "./ReactionEdge";
 import { wasAtomRecentlyDragged } from "./atom-drag-guard";
 import type { Atom, Reaction, Subtopic, User } from "@/lib/types";
@@ -502,18 +502,47 @@ function PreviewDot({ atom }: { atom: Atom }) {
       />
     );
   }
-  const fill =
-    USER_COLOR_HEX[
-      colorOfAuthor((atom as Extract<Atom, { kind: "human" }>).author_id)
-    ];
+  const human = atom as Extract<Atom, { kind: "human" }>;
+  const fill = USER_COLOR_HEX[colorOfAuthor(human.author_id)];
+  // Author initials sit on top of the colored swatch — the color identifies
+  // the voice across a workshop, the initials disambiguate similar-coloured
+  // contributors at a glance without needing a tooltip. 1-2 letters at
+  // 8.5 px fits comfortably in the 18×18 dot.
+  const author = userById(human.author_id);
+  const initials = author
+    ? author.name
+        .split(/\s+/)
+        .map((w) => w[0])
+        .filter(Boolean)
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "";
   return (
     <span
-      className="block h-full w-full rounded-[4px]"
+      className="flex h-full w-full items-center justify-center rounded-[4px]"
       style={{
         backgroundColor: fill,
         boxShadow:
           "0 1px 1px rgba(0,0,0,0.08), 1px 2px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.4)",
       }}
-    />
+    >
+      {initials && (
+        <span
+          aria-hidden
+          style={{
+            fontSize: 8.5,
+            lineHeight: 1,
+            fontWeight: 700,
+            letterSpacing: "0.02em",
+            color: "rgba(255,255,255,0.95)",
+            fontFamily: "var(--font-jetbrains-mono), ui-monospace, monospace",
+            textShadow: "0 1px 0 rgba(0,0,0,0.18)",
+          }}
+        >
+          {initials}
+        </span>
+      )}
+    </span>
   );
 }

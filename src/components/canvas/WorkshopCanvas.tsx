@@ -1523,15 +1523,35 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           return next;
         });
       } else {
-        // As Topic: bbox + padding around members
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const r of recs) {
-          minX = Math.min(minX, r.x);
-          minY = Math.min(minY, r.y);
-          maxX = Math.max(maxX, r.x + COMPACT_W);
-          maxY = Math.max(maxY, r.y + COMPACT_H);
-        }
-        const pad = 90;
+        // As Topic: spread members in a centered grid (so they don't stack
+        // visually inside the new vessel), then size the topic vessel to
+        // enclose the spread + padding.
+        const sortedMembers = [...memberIds].sort();
+        const cols = Math.max(1, Math.ceil(Math.sqrt(sortedMembers.length)));
+        const rows = Math.ceil(sortedMembers.length / cols);
+        const HGAP = 32; // breathing room between cards
+        const VGAP = 32;
+        const cellW = COMPACT_W + HGAP;
+        const cellH = COMPACT_H + VGAP;
+        // Total grid footprint (no trailing gap on the last col/row).
+        const gridW = cols * cellW - HGAP;
+        const gridH = rows * cellH - VGAP;
+        const startX = cx - gridW / 2;
+        const startY = cy - gridH / 2;
+        const newPositions: Record<string, { x: number; y: number }> = {};
+        sortedMembers.forEach((aid, idx) => {
+          const c = idx % cols;
+          const r = Math.floor(idx / cols);
+          newPositions[aid] = {
+            x: startX + c * cellW,
+            y: startY + r * cellH,
+          };
+        });
+        const pad = 60; // topic vessel breathing around the grid
+        const minX = startX - pad;
+        const minY = startY - pad;
+        const maxX = startX + gridW + pad;
+        const maxY = startY + gridH + pad;
         const newId = `t-cz-${stamp}`;
         const palette = [
           "#D9A66A",
@@ -1547,25 +1567,31 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           workshop_id: workshopId,
           title,
           description: "Crystallized from a contextual cluster.",
-          x: minX - pad,
-          y: minY - pad,
-          width: Math.max(TOPIC_MIN_W, maxX - minX + pad * 2),
-          height: Math.max(TOPIC_MIN_H, maxY - minY + pad * 2),
+          x: minX,
+          y: minY,
+          width: Math.max(TOPIC_MIN_W, maxX - minX),
+          height: Math.max(TOPIC_MIN_H, maxY - minY),
           hue,
         };
         setCustomTopics((prev) => [...prev, newTopic]);
         setAtomRecords((prev) => {
           const next = { ...prev };
-          for (const id of memberIds) {
-            if (next[id]) {
-              next[id] = { ...next[id], topic_id: newId };
+          for (const aid of sortedMembers) {
+            if (next[aid]) {
+              const p = newPositions[aid];
+              next[aid] = {
+                ...next[aid],
+                x: p.x,
+                y: p.y,
+                topic_id: newId,
+              };
             }
           }
           return next;
         });
-        // For Topic-cluster crystallize, the members stay where they are —
-        // those atom positions are the "fixed" anchor; everything else makes
-        // room.
+        // For Topic-cluster crystallize, the members are now placed in the
+        // grid — they're the "fixed" anchor; surrounding atoms / subtopics
+        // get pushed away by the collision resolver below.
         crystallizedFixedId = null;
       }
       // Always nudge neighbors away from the freshly placed entity. For the
@@ -1980,18 +2006,44 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                       next[id] = { ...next[id], manual: true };
                     }
                     droppedAsFloater = newSt === null;
+
+                    // ── Halo commit ──────────────────────────────────────
+                    // If the user released the atom with the overlap halo
+                    // up, lay it side-by-side with the target (gap 32 px)
+                    // and INHERIT the target's `topic_id`. Two reasons:
+                    //   1. side-by-side = the resulting cluster bbox is
+                    //      visibly larger than a single card, so the user
+                    //      can actually SEE that a cluster formed (when
+                    //      atoms perfectly stack the cluster bubble is the
+                    //      same size as one atom and reads as nothing).
+                    //   2. inheriting `topic_id` is what makes the
+                    //      subtopic-candidate cluster reliably fire — if
+                    //      the target is a topic-floater whose visual
+                    //      position drifted outside the topic vessel,
+                    //      `hitTestMembership` would otherwise return
+                    //      `topic_id: null` for the dropped atom and the
+                    //      pair would group as a TOPIC cluster (not the
+                    //      intended subtopic candidate).
+                    if (haloTarget && droppedAsFloater) {
+                      const tgt = next[haloTarget];
+                      if (tgt) {
+                        const GAP = 32;
+                        next[id] = {
+                          ...next[id],
+                          x: tgt.x + COMPACT_W + GAP,
+                          y: tgt.y,
+                          topic_id: tgt.topic_id,
+                          subtopic_id: null,
+                        };
+                      }
+                    }
                     return next;
                   });
                   setDraggingAtomId(null);
-                  // If the user dropped this as a floater, queue a collision
-                  // resolve. CRITICAL: when the user released WITH halo,
-                  // mark BOTH the dropped atom and the halo target as fixed.
-                  // Without this, the resolver pushes the target away by
-                  // ~186 px to stop the overlap — which can sometimes drop
-                  // the pair past the 240 px proximity threshold and the
-                  // subtopic cluster fails to form. Keeping them overlapping
-                  // is exactly the "preview → committed cluster" continuity
-                  // the user expects.
+                  // Queue a collision resolve. When halo was up, BOTH atoms
+                  // are fixed so they stay side-by-side; the cluster forms
+                  // immediately and the bubble's footprint (~ 2 cards wide)
+                  // is unmistakable.
                   if (droppedAsFloater) {
                     const fixed = [`atom:${id}`];
                     if (haloTarget) fixed.push(`atom:${haloTarget}`);
