@@ -1871,7 +1871,12 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
               const a = atomRecords[draggingAtomId];
               const b = atomRecords[dragHaloTargetId];
               if (!a || !b) return null;
-              const PAD = 24;
+              // 28 px to match ClusterBubble's outer padding so that on
+              // release the halo's footprint is identical to the
+              // ClusterBubble that paints in the same place — the user
+              // perceives the halo "settling" into the cluster rather than
+              // a visible jump.
+              const PAD = 28;
               const minX = Math.min(a.x, b.x) - PAD;
               const minY = Math.min(a.y, b.y) - PAD;
               const maxX = Math.max(a.x + COMPACT_W, b.x + COMPACT_W) + PAD;
@@ -1942,6 +1947,10 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                   });
                 }}
                 onDragEnd={(_e, _info, finalScreenX, finalScreenY) => {
+                  // Capture the halo target BEFORE clearing draggingAtomId
+                  // (the memo will return null after the state clears).
+                  const haloTarget =
+                    draggingAtomId === id ? dragHaloTargetId : null;
                   let droppedAsFloater = false;
                   setAtomRecords((prev) => {
                     const cur = prev[id];
@@ -1974,14 +1983,19 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                     return next;
                   });
                   setDraggingAtomId(null);
-                  // If the user dropped this as a floater, the dropped atom
-                  // is fixed and any overlapping floater / collapsed bubble
-                  // gets pushed away. Proximity-based clustering then catches
-                  // any neighbor still within the 240 px BFS threshold — the
-                  // halo is purely a visual preview during drag, not a
-                  // commit/cancel gate on cluster formation.
+                  // If the user dropped this as a floater, queue a collision
+                  // resolve. CRITICAL: when the user released WITH halo,
+                  // mark BOTH the dropped atom and the halo target as fixed.
+                  // Without this, the resolver pushes the target away by
+                  // ~186 px to stop the overlap — which can sometimes drop
+                  // the pair past the 240 px proximity threshold and the
+                  // subtopic cluster fails to form. Keeping them overlapping
+                  // is exactly the "preview → committed cluster" continuity
+                  // the user expects.
                   if (droppedAsFloater) {
-                    queueCollisionResolve([`atom:${id}`]);
+                    const fixed = [`atom:${id}`];
+                    if (haloTarget) fixed.push(`atom:${haloTarget}`);
+                    queueCollisionResolve(fixed);
                   }
                 }}
               />

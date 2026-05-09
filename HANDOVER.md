@@ -30,7 +30,8 @@ Your job:
 2. [CLAUDE.md](CLAUDE.md) — agent guidance, current architecture, pitfalls (§3 / §6 are the hard-won bits)
 3. [docs/design/Design_v1.md](docs/design/Design_v1.md) — full design spec; minimum is Part 0 + the Part C surface you're touching + Part D state machines that touch it
 4. [docs/contracts/wire-contract.md](docs/contracts/wire-contract.md) — backend contract
-5. [docs/integration.md](docs/integration.md) — how to talk to the (eventual) backend; mock-layer description in §3
+5. [docs/contracts/backend-checklist.md](docs/contracts/backend-checklist.md) — **read this before any joint backend integration session.** Captures every delta between the wire contract and what the post-redesign frontend actually emits/consumes; ordered cutover plan; cross-stack smoke tests
+6. [docs/integration.md](docs/integration.md) — how to talk to the (eventual) backend; mock-layer description in §3
 
 [docs/scaffold-demo/](docs/scaffold-demo/) is visual reference only — **do NOT port code from `Atomic Ideation.html`**.
 

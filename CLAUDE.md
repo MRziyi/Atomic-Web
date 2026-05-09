@@ -168,6 +168,8 @@ The frontend currently runs end-to-end **without** the backend — every endpoin
 
 See [docs/integration.md](docs/integration.md) for env, ports, auth/CORS, and the smoke test against the real backend.
 
+**Before joint testing**, the backend team should walk through [docs/contracts/backend-checklist.md](docs/contracts/backend-checklist.md) — it captures the deltas between the canonical wire contract and what the post-redesign frontend actually emits / consumes (atom-move with `topic_id`, subtopic+topic position persistence, `Crystallize.kind`, halo/cluster ownership, etc.) plus the cross-stack smoke tests we run for sign-off.
+
 If you build a new feature before its endpoint exists, mock the response inside `src/lib/api/<area>.ts` with a `// MOCK:` comment that names the endpoint and Design section. Grep for `// MOCK:` before opening a PR.
 
 ## 10. Open frontend TODOs
