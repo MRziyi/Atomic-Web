@@ -185,6 +185,41 @@ export function ReactionEdge({
   );
 }
 
+/**
+ * Given a rectangle centered at (cx, cy) with half-extents (halfW, halfH)
+ * and a direction (dx, dy) pointing OUT of the rectangle, returns the point
+ * where the ray exits the rectangle's boundary. Used to anchor reaction
+ * edges to the EDGE of an atom card (not its center) — "from edge to edge"
+ * reads as a connection between the cards, not a line piercing through them.
+ *
+ * Treats the card as an axis-aligned rectangle (the actual visual has small
+ * rounded corners; the geometry is close enough that the discrepancy is
+ * indistinguishable on a 2 px stroke). `gap` is added outward along the
+ * direction so the edge doesn't visually merge into the card's own border.
+ */
+export function rectExit(
+  cx: number,
+  cy: number,
+  halfW: number,
+  halfH: number,
+  dx: number,
+  dy: number,
+  gap = 3,
+): { x: number; y: number } {
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  // Parametrize the ray as (cx + t*dx, cy + t*dy); find the smallest t > 0
+  // at which the point is on the rectangle's boundary.
+  const tx = dx === 0 ? Infinity : (dx > 0 ? halfW : -halfW) / dx;
+  const ty = dy === 0 ? Infinity : (dy > 0 ? halfH : -halfH) / dy;
+  const t = Math.min(tx, ty);
+  // Push outward by `gap` along the unit direction so the line breathes
+  // off the card border.
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  return { x: cx + t * dx + ux * gap, y: cy + t * dy + uy * gap };
+}
+
 /** Quadratic-bezier curve with a gentle perpendicular bend. */
 function curvePath(
   a: { x: number; y: number },

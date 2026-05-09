@@ -523,7 +523,10 @@ If you're trying to cross-reference what's new, the relevant commits on
 | `e03ec99` | Atom-bubble sync + custom-subtopic topic drag fix + pinch-zoom + crystallize-as-topic semantics |
 | `2985195` | Collision repulsion, dynamic expanded H, drag-overlap halo (initial), reaction-edge tooltips |
 | `f724710` | Halo as single bounding bubble; restored proximity cluster; reaction tooltip placement fix |
-| `>= f724710` | This document — backend integration audit |
+| `ca200bf` | Halo release keeps both atoms fixed (subtopic cluster reliable); backend integration audit |
+| `a8cae9b` | Halo release lays atoms side-by-side + topic-id inheritance; crystallize-as-topic spreads members; preview dot shows author initials |
+| `0d32a14` | Removed customTopicIds filter (custom topics cluster like fixture topics); custom reaction tooltip (no native delay) |
+| `>= 0d32a14` | This file (next commit) — reaction edges anchor to RECT EDGE via `rectExit()` |
 
 ---
 

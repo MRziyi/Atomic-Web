@@ -29,7 +29,7 @@ import { cn } from "@/lib/cn";
 import { ContributorDots } from "@/components/ui/contributor-dots";
 import { MaturityMeter } from "@/components/ui/maturity-meter";
 import { colorOfAuthor, userById } from "@/lib/api/fixtures";
-import { ReactionEdge } from "./ReactionEdge";
+import { ReactionEdge, rectExit } from "./ReactionEdge";
 import { wasAtomRecentlyDragged } from "./atom-drag-guard";
 import type { Atom, Reaction, Subtopic, User } from "@/lib/types";
 
@@ -407,12 +407,39 @@ export function SubtopicBubble({
                   {previewReactions.map((r) => {
                     const f = previewLayout.positions[r.from_atom_id];
                     const t = previewLayout.positions[r.to_atom_id];
+                    const fx = f.x + PREVIEW_W / 2;
+                    const fy = f.y + PREVIEW_H / 2;
+                    const tx = t.x + PREVIEW_W / 2;
+                    const ty = t.y + PREVIEW_H / 2;
+                    const dx = tx - fx;
+                    const dy = ty - fy;
+                    // Preview dots are tiny (18 px); use a gap of 1 so the
+                    // edge still renders visibly between adjacent dots
+                    // while still anchoring to the dot's edge, not center.
+                    const fromExit = rectExit(
+                      fx,
+                      fy,
+                      PREVIEW_W / 2,
+                      PREVIEW_H / 2,
+                      dx,
+                      dy,
+                      1,
+                    );
+                    const toExit = rectExit(
+                      tx,
+                      ty,
+                      PREVIEW_W / 2,
+                      PREVIEW_H / 2,
+                      -dx,
+                      -dy,
+                      1,
+                    );
                     return (
                       <ReactionEdge
                         key={r.id}
                         id={r.id}
-                        from={{ x: f.x + PREVIEW_W / 2, y: f.y + PREVIEW_H / 2 }}
-                        to={{ x: t.x + PREVIEW_W / 2, y: t.y + PREVIEW_H / 2 }}
+                        from={fromExit}
+                        to={toExit}
                         kind={r.kind}
                         ghost={r.origin === "ai_suggested"}
                       />

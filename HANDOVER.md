@@ -9,13 +9,14 @@ Atomic Ideation is a multi-user research-ideation canvas. The frontend now ships
 - **In-place subtopic morph** (no modal). Same DOM element animates collapsed↔expanded.
 - **Squircle bubble** language with bubble-realistic surface (gradient, top-left highlight, multi-shadow). Topic vessels are watercolor / ink-wash rounded rectangles.
 - **Universal drag system** built on framer motion values + `instant=true` propagation during group drags (subtopic / topic / cluster) + rAF-batched pan setStates → no tween storms, no synthetic-pointermove feedback loops, no freezes.
-- **Proximity-detected clusters** that auto-form when 2+ floaters land within 240 px sharing the same `topic_id` AND each member is `clusterEligible`. Click → Crystallize button creates a real Subtopic or Topic at runtime. Crystallize-as-Topic does NOT wrap members in a subtopic — they sit as loose floaters inside the new Topic, awaiting future combinations.
-- **Drag-overlap halo (subtopic preview)**. Heavy overlap of two floaters in the same topic during drag draws a single dashed amber squircle around BOTH atoms — a preview of the subtopic they'd form. On release, the existing 240 px proximity cluster takes over and `ClusterBubble` paints in the same place (preview → committed cluster, visually continuous). The halo is feedback-only; cluster formation remains proximity-driven.
+- **Proximity-detected clusters** auto-form when 2+ floaters land within 240 px sharing the same `topic_id`. Uniform across fixture AND custom (crystallized) topics. Click → Crystallize button creates a real Subtopic or Topic at runtime. Crystallize-as-Topic spreads members past the 240 px threshold so the new Topic does NOT auto-wrap itself in a subtopic candidate; user can drag two atoms inside it closer to trigger one.
+- **Drag-overlap halo (subtopic preview)**. Heavy overlap of two floaters in the same topic during drag draws a single dashed amber squircle around BOTH atoms (28 px padding to match `ClusterBubble`'s footprint). On release, the dropped atom is laid SIDE-BY-SIDE with the target (32 px gap) and INHERITS the target's `topic_id`; both atoms are pinned via the collision resolver; `ClusterBubble` paints in the same place the halo just disappeared from (preview → committed cluster, no jump).
 - **Collision repulsion** ("elastic magnetism"). After every drop / land / crystallize, an iterative AABB resolver pushes neighbors away from the just-placed entity so floaters and bubbles never visually overlap.
 - **Dynamic expanded subtopic size**. Bubble height grows with atom count so the inner grid keeps generous breathing room (≥ 9 atoms → taller bubble).
 - **Click-outside-or-ESC closes** the expanded subtopic (no X close button).
-- **Collapsed-state preview dots + intra-subtopic reaction curves** are rendered as CHILDREN of `SubtopicBubble`'s motion.div so they inherit the bubble's transform — zero setState round-trip lag during any drag.
-- **Reaction edges show hover tooltips** explaining the kind (Support / Challenge / Build-on / Question / Cite, with an AI-suggested marker for ghost keys).
+- **Collapsed-state preview dots + intra-subtopic reaction curves** are rendered as CHILDREN of `SubtopicBubble`'s motion.div so they inherit the bubble's transform — zero setState round-trip lag during any drag. Human-atom dots overlay 1-2 author initials on top of the voice color.
+- **Reaction edges anchor to each card's RECT EDGE, not the center.** `rectExit()` clips both endpoints to the atom rectangle plus a small outward gap.
+- **Reaction edges show a custom hover tooltip** (no OS hover delay; `position:fixed` overlay outside the camera transform that follows the cursor) explaining the kind (Support / Challenge / Build-on / Question / Cite, AI-suggested marker for ghost keys).
 - **Click-toggle mic with Pocket staging**. Streaming atoms hover ~3 s in a Pocket above the dock, then fly to a position computed by the same hydration logic that places them — so fly target = final landing position (cluster-aware).
 
 Your job:
@@ -115,9 +116,11 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
 - [ ] Drop a floater near a collapsed subtopic bubble → the bubble (or the atom) gets nudged so they don't overlap
 - [ ] Drop a streamed atom (voice script) → existing same-topic atoms in its landing area get pushed away; readable spacing remains
 
-#### Reaction edge tooltips
+#### Reaction edges + tooltip
 
-- [ ] Hover any reaction edge (the SVG curve / zigzag between two atoms in the expanded subtopic atom band) → after the OS hover delay (~500 ms), a native tooltip surfaces "Support / Challenge / Build-on / Question / Cite — \<short explanation\>". AI-suggested ghost edges append "(AI suggested — pending review)"
+- [ ] Edge endpoints clip to the atom card's RECT EDGE (not the center) with a small outward gap — line should NOT visually pierce through the cards
+- [ ] Hover any reaction edge (the SVG curve / zigzag between two atoms in the expanded subtopic atom band) → a custom tooltip card appears IMMEDIATELY (no OS hover delay) at the cursor with `Support / Challenge / Build-on / Question / Cite` label + a short description. AI-suggested ghost edges add an "AI suggested" marker
+- [ ] Tooltip follows the cursor while hovering and clamps to the viewport (never spills off-screen). Stays the same physical size when the canvas zoom changes (rendered outside the camera transform)
 
 #### Subtopic drag ([CLAUDE.md §3](CLAUDE.md))
 

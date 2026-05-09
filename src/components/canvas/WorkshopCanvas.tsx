@@ -37,6 +37,7 @@ import {
   REACTION_KIND_DESC,
   REACTION_KIND_LABEL,
   ReactionEdge,
+  rectExit,
   type ReactionEdgeHoverInfo,
 } from "./ReactionEdge";
 import {
@@ -2520,12 +2521,40 @@ function ReactionLayer({
             const aAtom = allAtomsById[r.from_atom_id];
             const bAtom = allAtomsById[r.to_atom_id];
             if (!aAtom || !bAtom) return null;
+            // Edge endpoints clip to each card's RECT BOUNDARY (not the
+            // center), with a small outward gap so the line breathes off
+            // the card border. Reads as a connection between the cards
+            // rather than a line piercing through them.
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const fromExit = rectExit(
+              a.x,
+              a.y,
+              COMPACT_W / 2,
+              COMPACT_H / 2,
+              dx,
+              dy,
+            );
+            const toExit = rectExit(
+              b.x,
+              b.y,
+              COMPACT_W / 2,
+              COMPACT_H / 2,
+              -dx,
+              -dy,
+            );
             return (
               <ReactionEdge
                 key={r.id}
                 id={r.id}
-                from={{ x: a.x - bounds.minX, y: a.y - bounds.minY }}
-                to={{ x: b.x - bounds.minX, y: b.y - bounds.minY }}
+                from={{
+                  x: fromExit.x - bounds.minX,
+                  y: fromExit.y - bounds.minY,
+                }}
+                to={{
+                  x: toExit.x - bounds.minX,
+                  y: toExit.y - bounds.minY,
+                }}
                 kind={r.kind}
                 ghost={r.origin === "ai_suggested"}
                 onHover={onEdgeHover}
