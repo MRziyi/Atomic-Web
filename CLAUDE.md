@@ -91,8 +91,8 @@ All 12 design surfaces are wired against [`src/lib/api/fixtures.ts`](src/lib/api
 
 | # | Surface | File | Notes |
 |---|---|---|---|
-| 1 | `StreamingDock` (innovation C.1) | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) | Click-toggle mic, Pocket staging row, ~3 s hover then fly. `computeLandingScreenPos` from parent so fly target = future hydration position (cluster-aware). |
-| 2 | `AtomNode` (3 visual types: Human sticky / Literature dark slab / AI dashed ghost) | [src/components/canvas/AtomNode.tsx](src/components/canvas/AtomNode.tsx) | `size: "card" \| "compact"`. Membership badge prop. |
+| 1 | `StreamingDock` (innovation C.1) | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) | Click-toggle mic, Pocket staging row, ~3 s hover then fly. `computeLandingScreenPos` from parent so fly target = future hydration position (cluster-aware). The "AI" button now opens [`AiAssistPopover`](src/components/dock/AiAssistPopover.tsx) (P1 #1). |
+| 2 | `AtomNode` (3 visual types: Human sticky / Literature dark slab / AI dashed ghost) | [src/components/canvas/AtomNode.tsx](src/components/canvas/AtomNode.tsx) | `size: "card" \| "compact"`. Membership badge prop. **Right-click** opens [`AtomReactionMenu`](src/components/canvas/AtomReactionMenu.tsx) (P1 #2). **Left-click** sets `useCanvas.selectedAtomId` for the AI-assist popover. |
 | 3 | `ReactionEdge` (5 kinds, ghost variant) | [src/components/canvas/ReactionEdge.tsx](src/components/canvas/ReactionEdge.tsx) | Hand-rolled SVG; Challenge = zigzag amplitude 6. |
 | 4 | `SubtopicBubble` (squircle, in-place morph) | [src/components/canvas/SubtopicBubble.tsx](src/components/canvas/SubtopicBubble.tsx) | Same DOM element morphs collapsed↔expanded via framer animate(width/height). **Collapsed-mode topology preview (preview dots + intra-subtopic reaction curves) is rendered as CHILDREN of this bubble's motion.div**, geometrically guaranteed to stay inside via `gridLocal`. No more X close button — click-outside or ESC closes. |
 | 5 | `TopicVessel` (rounded-rect ink wash, draggable label) | [src/components/canvas/TopicVessel.tsx](src/components/canvas/TopicVessel.tsx) | Bbox is dynamic — `computeTopicGeometry()` unions subtopics + floaters with this `topic_id`, capped at fixture-size + 100 px. |
@@ -110,6 +110,10 @@ All 12 design surfaces are wired against [`src/lib/api/fixtures.ts`](src/lib/api
 
 **Recently added**:
 - [`atom-drag-guard.ts`](src/components/canvas/atom-drag-guard.ts) — module-level drag/click guard.
+- [`AtomReactionMenu.tsx`](src/components/canvas/AtomReactionMenu.tsx) — right-click context menu on atoms (P1 #2). Two-step UI: pick a kind, then pick a target from the SAME-subtopic siblings (Invariant I10). `cite` is filtered to literature targets (Invariant I3). Posts via `useCreateReaction`; the new reaction is appended to `WorkshopCanvas.customReactions` until backend ships.
+- [`AiAssistPopover.tsx`](src/components/dock/AiAssistPopover.tsx) — radix Popover anchored to the dock's "AI" button (P1 #1). Surfaces **existing** connections involving `useCanvas.selectedAtomId` only — accepted reactions and pending ghost keys (`usePendingReactions`). Has accept/dismiss buttons + "jump to other end" actions. **Never authors a new atom** (Invariant I1) — copy reads "AI surfaces existing connections — never authors atoms."
+- `panToWorkshopPos` / `jumpToSubtopic` / `jumpToAtom` helpers in [`WorkshopCanvas.tsx`](src/components/canvas/WorkshopCanvas.tsx) — pan camera to a workshop-coords point, then optionally expand-or-select on a 420 ms delay (matches the canvas tween). Wired to `InsightsDrawer.onJumpToSubtopic` (P1 #5) and `AiAssistPopover.onJumpToAtom`.
+- Auth persistence in [`auth.ts`](src/lib/stores/auth.ts) — wrapped with `zustand/middleware` `persist`, key `aw.auth.v1`, localStorage. Survives reload (P1 #3). Login page redirects to `/` if persisted user already exists.
 
 ### Cutover plan when the backend lands
 
@@ -199,16 +203,16 @@ The full P0 batch is in `git log` (commits `5164aff` onward). Items shipped thro
 
 ### P1 — required for a credible user study
 
-| # | Item | Where |
-|---|---|---|
-| 1 | AI-assist popover on selected atom | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) `AI` button — surfaces existing connections only (invariant I1). |
-| 2 | Right-click reaction menu on AtomNode | [src/components/canvas/AtomNode.tsx](src/components/canvas/AtomNode.tsx) — §C.5 add support / challenge / build-on / question / cite to another atom. |
-| 3 | Persist auth across reloads | [src/lib/stores/auth.ts](src/lib/stores/auth.ts) — wrap with `zustand/middleware` `persist`. |
-| 4 | Route guards | layout / middleware — guard `/workshop/[id]` for the real OAuth flow. |
-| 5 | Insights "jump →" pans the camera before expanding | [src/components/insights/InsightsDrawer.tsx](src/components/insights/InsightsDrawer.tsx) — currently jumps straight to expand. |
-| 6 | Tour first-time auto-prompt + 30 s idle prompt | [src/components/tour/OnboardingTour.tsx](src/components/tour/OnboardingTour.tsx) — §C.7 non-modal "Want me to guide you?". |
-| 7 | Empty-state for non-fixture workshops | [src/lib/api/hooks.ts](src/lib/api/hooks.ts) `useWorkshopOverview` stub — w-trust / w-multimodal / w-policy currently render empty canvas. |
-| 8 | Backend cutover for crystallize → server-returned Subtopic / Topic replaces local custom* state | [src/lib/api/hooks.ts](src/lib/api/hooks.ts) `useCrystallize` |
+| # | Item | Where | Status |
+|---|---|---|---|
+| 1 | AI-assist popover on selected atom (surfaces existing connections only — Invariant I1) | [src/components/dock/StreamingDock.tsx](src/components/dock/StreamingDock.tsx) + [src/components/dock/AiAssistPopover.tsx](src/components/dock/AiAssistPopover.tsx) | ✅ shipped |
+| 2 | Right-click reaction menu on AtomNode (5 kinds; `cite`-only-to-literature) | [src/components/canvas/AtomNode.tsx](src/components/canvas/AtomNode.tsx) + [src/components/canvas/AtomReactionMenu.tsx](src/components/canvas/AtomReactionMenu.tsx) | ✅ shipped |
+| 3 | Persist auth across reloads (zustand `persist` to localStorage `aw.auth.v1`) | [src/lib/stores/auth.ts](src/lib/stores/auth.ts) | ✅ shipped |
+| 4 | Route guards | layout / middleware — guard `/workshop/[id]` for the real OAuth flow. | pending |
+| 5 | Insights "jump →" pans the camera before expanding (~420 ms tween, then `expandSubtopic`) | [src/components/insights/InsightsDrawer.tsx](src/components/insights/InsightsDrawer.tsx) wired to `WorkshopCanvas.jumpToSubtopic` | ✅ shipped |
+| 6 | Tour first-time auto-prompt + 30 s idle prompt | [src/components/tour/OnboardingTour.tsx](src/components/tour/OnboardingTour.tsx) — §C.7 non-modal "Want me to guide you?". | pending |
+| 7 | Empty-state for non-fixture workshops | [src/lib/api/hooks.ts](src/lib/api/hooks.ts) `useWorkshopOverview` stub — w-trust / w-multimodal / w-policy currently render empty canvas. | pending |
+| 8 | Backend cutover for crystallize → server-returned Subtopic / Topic replaces local custom* state | [src/lib/api/hooks.ts](src/lib/api/hooks.ts) `useCrystallize` | pending |
 
 ### P2 — polish
 
@@ -226,7 +230,7 @@ The full P0 batch is in `git log` (commits `5164aff` onward). Items shipped thro
 
 | # | Item |
 |---|---|
-| 16 | Update [docs/contracts/domain-types.md](docs/contracts/domain-types.md) to mirror new types in [src/lib/types.ts](src/lib/types.ts) and ping the backend repo. **Do this before backend cutover.** |
+| 16 | ✅ shipped — [docs/contracts/domain-types.md](docs/contracts/domain-types.md) is now `v2 — 2026-05-09`, the canonical frontend↔backend contract. Bump revision header on any wire change. |
 | 17 | Test suite — Vitest + RTL on AtomNode / ReactionEdge zigzag math / MockStreamSession state machine / proximity cluster detection. |
 | 18 | Root-level `error.tsx` so a runtime exception doesn't blank the page. |
 | 19 | `loading.tsx` per route + `not-found.tsx`. |

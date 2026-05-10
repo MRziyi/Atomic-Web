@@ -33,6 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AtomNode, type AtomMembership } from "./AtomNode";
+import { AtomReactionMenu } from "./AtomReactionMenu";
 import {
   REACTION_KIND_DESC,
   REACTION_KIND_LABEL,
@@ -63,8 +64,12 @@ import { StreamingDock } from "@/components/dock/StreamingDock";
 import { InsightsDrawer } from "@/components/insights/InsightsDrawer";
 import { OnboardingTour } from "@/components/tour/OnboardingTour";
 import {
+  useAcceptReaction,
+  useCreateReaction,
   useCrystallize,
+  useDismissReaction,
   useInsights,
+  usePendingReactions,
   useStartTour,
   useWorkshopOverview,
 } from "@/lib/api/hooks";
@@ -118,12 +123,18 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
 
   const expandedSubtopicId = useCanvas((s) => s.expandedSubtopicId);
   const expandSubtopic = useCanvas((s) => s.expandSubtopic);
+  const selectedAtomId = useCanvas((s) => s.selectedAtomId);
+  const selectAtom = useCanvas((s) => s.selectAtom);
   const camera = useCanvas((s) => s.camera);
   const setCamera = useCanvas((s) => s.setCamera);
   const insightsOpen = useCanvas((s) => s.insightsOpen);
   const tourActive = useCanvas((s) => s.tourActive);
   const tourFocusId = useCanvas((s) => s.tourFocusId);
   const insightsLink = useCrystallize();
+  const createReaction = useCreateReaction();
+  const acceptReaction = useAcceptReaction();
+  const dismissReaction = useDismissReaction();
+  const { data: pendingReactionsAll } = usePendingReactions(workshopId);
 
   const atomsById = useAtoms((s) => s.atoms);
   const freshAtomIds = useAtoms((s) => s.freshAtomIds);
@@ -168,6 +179,19 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [edgeHover, setEdgeHover] = useState<ReactionEdgeHoverInfo | null>(
     null,
   );
+
+  /** Right-click reaction context-menu state. Opens at the cursor when the
+   *  user right-clicks an atom; closes on outside click / Esc / submit. */
+  const [reactionMenu, setReactionMenu] = useState<{
+    sourceId: string;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+
+  /** Reactions created at runtime by the user (right-click → context menu).
+   *  Until the backend ships POST /reactions/ for real, these live alongside
+   *  fixture `overview.reactions` and feed the same ReactionLayer. */
+  const [customReactions, setCustomReactions] = useState<Reaction[]>([]);
 
   /**
    * Per-subtopic override of fixture topic_id. Lets the user drag a subtopic
@@ -527,7 +551,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   const [scrolling, setScrolling] = useState(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Wheel listener is attached to `window` (not the canvas div) for two
+  // Wheel listener is attached to `window` (not the canvas div) for three
   // reasons:
   //   1. React 19 synthetic wheel events are passive, so `e.preventDefault()`
   //      on `onWheel` throws warnings — a native non-passive listener is
@@ -536,24 +560,28 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
   //      container, NOT a descendant — so a pinch over the header would
   //      bypass a container-level listener and trigger the browser's default
   //      page zoom. A window-level listener catches it regardless of target.
-  // We read camera/scrolling from refs so this never needs to re-attach.
+  //   3. We mount this listener UNCONDITIONALLY on first mount and read
+  //      `containerRef.current` INSIDE the handler. Earlier the effect
+  //      bailed with `if (!el) return;` — but during `isLoading`/`!overview`
+  //      the component returns a loading div with NO canvas ref, so the
+  //      listener never attached and pinch fell through to the browser zoom.
+  //      Reading the ref inside the handler closes that gap and also
+  //      guarantees ctrlKey wheel is preventDefault'd even before the
+  //      workshop has loaded.
   const cameraRef = useRef(camera);
   cameraRef.current = camera;
   const scrollingRef = useRef(scrolling);
   scrollingRef.current = scrolling;
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
     const handler = (e: WheelEvent) => {
-      const cam = cameraRef.current;
       if (e.ctrlKey) {
         // Pinch zoom — ALWAYS prevent the browser's page-zoom default,
-        // regardless of where the gesture lands.
+        // regardless of where the gesture lands or whether the canvas is
+        // mounted yet.
         e.preventDefault();
-        // Apply canvas zoom only if the gesture is over the canvas. (Pinch
-        // over the header etc. is silently absorbed — better than the
-        // browser zooming the whole UI.)
-        if (!el.contains(e.target as Node)) return;
+        const el = containerRef.current;
+        if (!el || !el.contains(e.target as Node)) return;
+        const cam = cameraRef.current;
         const rect = el.getBoundingClientRect();
         const cx = e.clientX - rect.left;
         const cy = e.clientY - rect.top;
@@ -569,8 +597,10 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
         // Two-finger pan / mouse wheel — only intercept when the gesture is
         // over the canvas. Otherwise let the event bubble (so e.g. the
         // Insights drawer can scroll its content normally).
-        if (!el.contains(e.target as Node)) return;
+        const el = containerRef.current;
+        if (!el || !el.contains(e.target as Node)) return;
         e.preventDefault();
+        const cam = cameraRef.current;
         const PAN_MULT = 1.4;
         setCamera({
           x: cam.x - e.deltaX * PAN_MULT,
@@ -582,7 +612,19 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       scrollTimeoutRef.current = setTimeout(() => setScrolling(false), 120);
     };
     window.addEventListener("wheel", handler, { passive: false });
-    return () => window.removeEventListener("wheel", handler);
+    // macOS Safari fires WebKit gesture events for trackpad pinch in
+    // addition to wheel-with-ctrlKey. Chrome on macOS doesn't, but adding
+    // these as defense-in-depth costs nothing.
+    const onGesture = (e: Event) => e.preventDefault();
+    window.addEventListener("gesturestart", onGesture, { passive: false });
+    window.addEventListener("gesturechange", onGesture, { passive: false });
+    window.addEventListener("gestureend", onGesture, { passive: false });
+    return () => {
+      window.removeEventListener("wheel", handler);
+      window.removeEventListener("gesturestart", onGesture);
+      window.removeEventListener("gesturechange", onGesture);
+      window.removeEventListener("gestureend", onGesture);
+    };
   }, [setCamera]);
 
   useEffect(() => () => {
@@ -630,6 +672,70 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overview]);
+
+  /**
+   * Pan (and zoom in) to a workshop-coords point so it ends up centered on
+   * screen. Used by:
+   *   - InsightsDrawer "jump →" (Design §C.8 + P1 #5) — pan first, expand
+   *     after the camera settles so the user perceives the connection.
+   *   - AI-assist popover "jump to other end" — focus the related atom.
+   *
+   * Camera transform: screen = (workshop * zoom) + cameraOffset. To center a
+   * point P at the screen midpoint M with current zoom Z:
+   *     cameraOffset = M - P * Z
+   * We honor a minimum zoom (z=0.9) so jumping doesn't *zoom out* if the
+   * user was already zoomed in below that.
+   */
+  const panToWorkshopPos = useCallback(
+    (wx: number, wy: number) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const availableW = rect.width - (insightsOpen ? 320 : 0);
+      const targetZoom = Math.max(camera.zoom, 0.9);
+      setCamera({
+        x: availableW / 2 - wx * targetZoom,
+        y: rect.height / 2 - wy * targetZoom,
+        zoom: targetZoom,
+      });
+    },
+    [camera.zoom, insightsOpen, setCamera],
+  );
+
+  /**
+   * Pan to a subtopic by its workshop-absolute center, then expand it after
+   * the camera animation completes. Used by the Insights drawer's "jump →"
+   * action — see CLAUDE.md §10 P1 #5.
+   */
+  const jumpToSubtopic = useCallback(
+    (sid: string) => {
+      const s = allSubtopicsList.find((x) => x.id === sid);
+      const center = s ? subtopicPos[sid] ?? { x: s.x, y: s.y } : null;
+      if (center) panToWorkshopPos(center.x, center.y);
+      // Camera tween is ~400ms (`transition.duration: 0.4` on the canvas
+      // motion.div). Defer the in-place morph until after pan settles so the
+      // user perceives "fly there → expand" as one motion, not a jump-cut.
+      window.setTimeout(() => expandSubtopic(sid), 420);
+    },
+    [allSubtopicsList, panToWorkshopPos, subtopicPos, expandSubtopic],
+  );
+
+  /** Pan to a specific atom and select it (used by AI-assist popover). */
+  const jumpToAtom = useCallback(
+    (aid: string) => {
+      const rec = atomRecords[aid];
+      if (!rec) return;
+      panToWorkshopPos(rec.x + COMPACT_W / 2, rec.y + COMPACT_H / 2);
+      selectAtom(aid);
+      // If the atom belongs to a subtopic that isn't expanded, expand it
+      // after pan so the user sees the full sticky-note (compact cards only
+      // exist while the subtopic is expanded; collapsed subtopics show
+      // preview dots).
+      if (rec.subtopic_id && rec.subtopic_id !== expandedSubtopicId) {
+        window.setTimeout(() => expandSubtopic(rec.subtopic_id), 420);
+      }
+    },
+    [atomRecords, panToWorkshopPos, selectAtom, expandedSubtopicId, expandSubtopic],
+  );
 
   // Per user instruction: expand should NOT cause any automatic pan or zoom.
   // The bubble grows in place where it sits; the user controls the camera.
@@ -1667,7 +1773,13 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
 
   // Reactions filtered: drop edges that cross topic boundaries (both atoms must
   // share a topic_id, OR at least one must be null/floater).
-  const reactions = overview.reactions;
+  // `customReactions` are user-drawn ones from the right-click context menu;
+  // until the backend ships POST /reactions/ they live in local state and
+  // are concatenated here so the ReactionLayer + intra-bubble preview both
+  // see them via the same `reactions` reference.
+  const reactions = customReactions.length
+    ? [...overview.reactions, ...customReactions]
+    : overview.reactions;
 
   // Render lists (fixture + crystallized at runtime)
   const expandedSubtopic = expandedSubtopicId
@@ -1983,8 +2095,21 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
                 draggable
                 dimmed={false}
                 fresh={freshAtomIds.has(id)}
+                selected={selectedAtomId === id}
                 instant={instantSnap}
                 membership={membershipFor(rec)}
+                onSelect={(aid) => selectAtom(aid)}
+                onContextMenu={(e, a) => {
+                  e.preventDefault();
+                  // Selecting on right-click feels expected; the AI-assist
+                  // popover keys off the same selection.
+                  selectAtom(a.id);
+                  setReactionMenu({
+                    sourceId: a.id,
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                  });
+                }}
                 onDragStartTrigger={() => setDraggingAtomId(id)}
                 onPositionUpdate={(nx, ny) => {
                   setAtomRecords((prev) => {
@@ -2083,7 +2208,7 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
 
       <InsightsDrawer
         workshopId={workshopId}
-        onJumpToSubtopic={(id) => expandSubtopic(id)}
+        onJumpToSubtopic={jumpToSubtopic}
       />
 
       <OnboardingTour />
@@ -2091,6 +2216,27 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
       <StreamingDock
         workshopId={workshopId}
         computeLandingScreenPos={computeLandingScreenPos}
+        selectedAtom={selectedAtomId ? allAtomsById[selectedAtomId] ?? null : null}
+        atomsById={allAtomsById}
+        selectedAtomReactions={
+          selectedAtomId
+            ? [
+                ...reactions.filter(
+                  (r) =>
+                    r.from_atom_id === selectedAtomId ||
+                    r.to_atom_id === selectedAtomId,
+                ),
+                ...((pendingReactionsAll ?? []).filter(
+                  (r) =>
+                    r.from_atom_id === selectedAtomId ||
+                    r.to_atom_id === selectedAtomId,
+                )),
+              ]
+            : []
+        }
+        onAcceptGhost={(id) => acceptReaction.mutate(id)}
+        onDismissGhost={(id) => dismissReaction.mutate(id)}
+        onJumpToAtom={jumpToAtom}
       />
 
       {/* Custom reaction-edge tooltip — fixed-position so it follows the
@@ -2120,6 +2266,50 @@ export function WorkshopCanvas({ workshopId }: { workshopId: string }) {
           </div>
         </div>
       )}
+
+      {/* Right-click reaction context menu (Design §C.5 / P1 #2). Targets
+          are filtered to the source's same non-null subtopic so reactions
+          stay inside the bubble (Invariant I10). The menu itself filters
+          `cite` to literature targets (Invariant I3). */}
+      {reactionMenu &&
+        (() => {
+          const src = allAtomsById[reactionMenu.sourceId];
+          if (!src) return null;
+          const srcRec = atomRecords[src.id];
+          const srcSubtopic = srcRec?.subtopic_id ?? null;
+          // Reachable targets: same non-null subtopic, excluding the source.
+          // For free floaters / topic-floaters the user can't draw an
+          // edge yet (matches Invariant I10) — the menu will show empty.
+          const reachable = srcSubtopic
+            ? Object.entries(atomRecords)
+                .filter(([id, r]) => id !== src.id && r.subtopic_id === srcSubtopic)
+                .map(([id]) => allAtomsById[id])
+                .filter((a): a is Atom => !!a)
+            : [];
+          return (
+            <AtomReactionMenu
+              source={src}
+              targets={reachable}
+              clientX={reactionMenu.clientX}
+              clientY={reactionMenu.clientY}
+              onCreate={(kind, toAtomId) => {
+                createReaction.mutate(
+                  {
+                    kind,
+                    from_atom_id: src.id,
+                    to_atom_id: toAtomId,
+                  },
+                  {
+                    onSuccess: (reaction) => {
+                      setCustomReactions((prev) => [...prev, reaction]);
+                    },
+                  },
+                );
+              }}
+              onClose={() => setReactionMenu(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
@@ -2270,6 +2460,7 @@ interface DraggableAtomProps {
   /** Visually dim — used when this atom belongs to a non-expanded subtopic. */
   dimmed: boolean;
   fresh?: boolean;
+  selected?: boolean;
   /** When true, snap to position (no animation) — used while parent subtopic is dragging. */
   instant: boolean;
   membership: AtomMembership | null;
@@ -2281,6 +2472,8 @@ interface DraggableAtomProps {
     finalScreenX: number,
     finalScreenY: number,
   ) => void;
+  onSelect?: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, atom: Atom) => void;
 }
 
 function DraggableAtom({
@@ -2290,11 +2483,14 @@ function DraggableAtom({
   draggable,
   dimmed,
   fresh,
+  selected,
   instant,
   membership,
   onDragStartTrigger,
   onPositionUpdate,
   onDragEnd,
+  onSelect,
+  onContextMenu,
 }: DraggableAtomProps) {
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
@@ -2390,7 +2586,10 @@ function DraggableAtom({
           atom={atom}
           size="compact"
           fresh={fresh}
+          selected={selected}
           membership={membership}
+          onSelect={onSelect}
+          onContextMenu={onContextMenu}
         />
       ) : (
         <PreviewDot atom={atom} />

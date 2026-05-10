@@ -25,6 +25,7 @@ import type {
   InsightsBundle,
   ProposalDraft,
   Reaction,
+  ReactionKind,
   SubtopicDetail,
   TourSession,
   TourStop,
@@ -116,6 +117,41 @@ export function useAcceptReaction() {
     mutationFn: async (id: string) => {
       // MOCK: POST /reactions/{id}/accept — flips status to accepted.
       return delay(150, id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pending-reactions"] });
+      qc.invalidateQueries({ queryKey: ["insights"] });
+    },
+  });
+}
+
+/**
+ * MOCK: POST /reactions/ — human-drawn reaction (Design §C.5, Invariant I3
+ * "cite-only-to-literature" enforced by the caller too). Returns a synthesised
+ * Reaction the caller appends to local state until the backend ships.
+ */
+export function useCreateReaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      kind: ReactionKind;
+      from_atom_id: string;
+      to_atom_id: string;
+    }): Promise<Reaction> => {
+      // Backend will assign id, origin/status, created_by, created_at.
+      // Until then we synthesise a plausible record.
+      const id = `r-local-${Math.random().toString(36).slice(2, 8)}`;
+      const reaction: Reaction = {
+        id,
+        kind: params.kind,
+        from_atom_id: params.from_atom_id,
+        to_atom_id: params.to_atom_id,
+        origin: "human",
+        created_by: "u-sarah",
+        status: "accepted",
+        created_at: new Date().toISOString(),
+      };
+      return delay(120, reaction);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pending-reactions"] });

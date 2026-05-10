@@ -72,12 +72,21 @@ export type AtomMembership =
   | { kind: "topic-floater"; label: string }
   | { kind: "unaffiliated" };
 
+export type AtomContextMenuHandler = (
+  e: React.MouseEvent,
+  atom: Atom,
+) => void;
+
 interface AtomNodeProps {
   atom: Atom;
   size?: AtomSize;
   selected?: boolean;
   fresh?: boolean;
   onSelect?: (id: string) => void;
+  /** Right-click. Frontend uses this to open the reaction context menu (§C.5
+   *  + P1 #2). Implementations should call `e.preventDefault()` to suppress
+   *  the OS-level context menu. */
+  onContextMenu?: AtomContextMenuHandler;
   className?: string;
   /** Optional badge showing where this note currently belongs. */
   membership?: AtomMembership | null;
@@ -89,6 +98,7 @@ export function AtomNode({
   selected,
   fresh,
   onSelect,
+  onContextMenu,
   className,
   membership,
 }: AtomNodeProps) {
@@ -100,6 +110,7 @@ export function AtomNode({
         selected={selected}
         fresh={fresh}
         onSelect={onSelect}
+        onContextMenu={onContextMenu}
         className={className}
         membership={membership ?? null}
       />
@@ -113,6 +124,7 @@ export function AtomNode({
         selected={selected}
         fresh={fresh}
         onSelect={onSelect}
+        onContextMenu={onContextMenu}
         className={className}
         membership={membership ?? null}
       />
@@ -125,6 +137,7 @@ export function AtomNode({
       selected={selected}
       fresh={fresh}
       onSelect={onSelect}
+      onContextMenu={onContextMenu}
       className={className}
       membership={membership ?? null}
     />
@@ -182,6 +195,7 @@ function HumanSticky({
   selected,
   fresh,
   onSelect,
+  onContextMenu,
   className,
   membership,
 }: {
@@ -190,6 +204,7 @@ function HumanSticky({
   selected?: boolean;
   fresh?: boolean;
   onSelect?: (id: string) => void;
+  onContextMenu?: AtomContextMenuHandler;
   className?: string;
   membership: AtomMembership | null;
 }) {
@@ -224,6 +239,7 @@ function HumanSticky({
     <motion.button
       type="button"
       onClick={() => onSelect?.(atom.id)}
+      onContextMenu={(e) => onContextMenu?.(e, atom)}
       title={atom.text}
       initial={fresh ? { rotate: rotation, scale: 1.08 } : { rotate: rotation }}
       animate={{ rotate: rotation, scale: 1 }}
@@ -231,6 +247,7 @@ function HumanSticky({
       className={cn(
         "relative block rounded-[4px] border text-left text-ink select-none cursor-pointer",
         "transition-shadow",
+        selected && "ring-2 ring-ink/40 ring-offset-1 ring-offset-paper",
         COLOR_TOKEN_TO_TINT[authorColor],
         dims,
         "hover:[box-shadow:0_2px_2px_rgba(0,0,0,0.05),3px_6px_10px_rgba(0,0,0,0.10),inset_0_1px_0_rgba(255,255,255,0.55)]",
@@ -300,6 +317,7 @@ function LiteratureSlab({
   selected,
   fresh,
   onSelect,
+  onContextMenu,
   className,
   membership,
 }: {
@@ -308,6 +326,7 @@ function LiteratureSlab({
   selected?: boolean;
   fresh?: boolean;
   onSelect?: (id: string) => void;
+  onContextMenu?: AtomContextMenuHandler;
   className?: string;
   membership: AtomMembership | null;
 }) {
@@ -329,6 +348,7 @@ function LiteratureSlab({
     <motion.button
       type="button"
       onClick={() => onSelect?.(atom.id)}
+      onContextMenu={(e) => onContextMenu?.(e, atom)}
       title={atom.text}
       initial={fresh ? { scale: 1.08 } : false}
       animate={fresh ? { scale: 1 } : undefined}
@@ -336,6 +356,7 @@ function LiteratureSlab({
       className={cn(
         "relative block rounded-[4px] bg-ink text-left select-none cursor-pointer",
         "transition-shadow",
+        selected && "ring-2 ring-paper/60 ring-offset-1 ring-offset-ink",
         dims,
         className,
       )}
@@ -399,6 +420,7 @@ function AiGhost({
   selected,
   fresh,
   onSelect,
+  onContextMenu,
   className,
   membership,
 }: {
@@ -407,6 +429,7 @@ function AiGhost({
   selected?: boolean;
   fresh?: boolean;
   onSelect?: (id: string) => void;
+  onContextMenu?: AtomContextMenuHandler;
   className?: string;
   membership: AtomMembership | null;
 }) {
@@ -435,6 +458,7 @@ function AiGhost({
     <motion.button
       type="button"
       onClick={() => onSelect?.(atom.id)}
+      onContextMenu={(e) => onContextMenu?.(e, atom)}
       title={atom.text}
       initial={fresh ? { scale: 1.08 } : false}
       animate={fresh ? { scale: 1 } : undefined}
@@ -442,6 +466,7 @@ function AiGhost({
       className={cn(
         "relative block rounded-[4px] border-[1.5px] border-dashed border-ink-3/55",
         "bg-bg-elev/85 text-left select-none cursor-pointer transition-shadow",
+        selected && "ring-2 ring-ink/40 ring-offset-1 ring-offset-paper",
         dims,
         className,
       )}

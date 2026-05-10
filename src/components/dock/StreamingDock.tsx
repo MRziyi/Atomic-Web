@@ -22,11 +22,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AtomNode } from "@/components/canvas/AtomNode";
+import { AiAssistPopover } from "@/components/dock/AiAssistPopover";
 import { MockStreamSession } from "@/lib/api/mock-stream";
 import { useAtoms } from "@/lib/stores/atoms";
 import { useCanvas } from "@/lib/stores/canvas";
 import { cn } from "@/lib/cn";
-import type { Atom, HumanAtom, StreamEvent } from "@/lib/types";
+import type { Atom, HumanAtom, Reaction, StreamEvent } from "@/lib/types";
 
 type MicPermission = "unknown" | "requesting" | "granted" | "denied" | "unavailable";
 
@@ -60,12 +61,28 @@ interface FlyingCard {
 export function StreamingDock({
   workshopId,
   computeLandingScreenPos,
+  selectedAtom,
+  selectedAtomReactions,
+  atomsById,
+  onAcceptGhost,
+  onDismissGhost,
+  onJumpToAtom,
 }: {
   workshopId: string;
   /** Optional: parent (WorkshopCanvas) tells us where the atom will materialize
    *  in screen coords so the fly animation lands exactly on the future
    *  hydration position (not the topic vessel center). */
   computeLandingScreenPos?: (atom: Atom) => { x: number; y: number } | null;
+  /** ─── AI-assist popover wiring (Design §C.6 + §C.5 + Invariant I1). The
+   *  parent (WorkshopCanvas) owns reaction state so it passes everything
+   *  the popover needs. The popover NEVER mutates atoms — only surfaces /
+   *  jumps / accepts-rejects suggested reactions. */
+  selectedAtom?: Atom | null;
+  selectedAtomReactions?: Reaction[];
+  atomsById?: Record<string, Atom>;
+  onAcceptGhost?: (id: string) => void;
+  onDismissGhost?: (id: string) => void;
+  onJumpToAtom?: (id: string) => void;
 }) {
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -477,9 +494,13 @@ export function StreamingDock({
             )}
           </div>
 
-          <Tooltip
-            content="ai-assist on selected atom (suggests connections; never authors atoms)"
-            side="top"
+          <AiAssistPopover
+            selected={selectedAtom ?? null}
+            atomsById={atomsById ?? {}}
+            related={selectedAtomReactions ?? []}
+            onAcceptGhost={(id) => onAcceptGhost?.(id)}
+            onDismissGhost={(id) => onDismissGhost?.(id)}
+            onJumpToAtom={(id) => onJumpToAtom?.(id)}
           >
             <Button
               variant="ghost"
@@ -487,10 +508,19 @@ export function StreamingDock({
               type="button"
               disabled={recording}
               className="self-center"
+              title="AI surfaces existing connections — it never writes new atoms"
             >
               <Sparkles className="h-4 w-4" /> AI
+              {selectedAtom && (selectedAtomReactions?.length ?? 0) > 0 && (
+                <span
+                  className="ml-1 inline-flex min-w-[14px] items-center justify-center rounded-full bg-ink px-1 text-[9px] font-mono text-paper"
+                  aria-label={`${selectedAtomReactions?.length} connections`}
+                >
+                  {selectedAtomReactions?.length}
+                </span>
+              )}
             </Button>
-          </Tooltip>
+          </AiAssistPopover>
 
           <Button
             variant="primary"

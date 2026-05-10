@@ -18,6 +18,10 @@ Atomic Ideation is a multi-user research-ideation canvas. The frontend now ships
 - **Reaction edges anchor to each card's RECT EDGE, not the center.** `rectExit()` clips both endpoints to the atom rectangle plus a small outward gap.
 - **Reaction edges show a custom hover tooltip** (no OS hover delay; `position:fixed` overlay outside the camera transform that follows the cursor) explaining the kind (Support / Challenge / Build-on / Question / Cite, AI-suggested marker for ghost keys).
 - **Click-toggle mic with Pocket staging**. Streaming atoms hover ~3 s in a Pocket above the dock, then fly to a position computed by the same hydration logic that places them — so fly target = final landing position (cluster-aware).
+- **Right-click reaction menu on any atom** (P1 #2). Two-step popover: pick a kind, then pick a target from the same non-null subtopic (Invariant I10). `cite` filtered to literature targets (Invariant I3). Submitting writes via `useCreateReaction`; new reactions live in `WorkshopCanvas.customReactions` until the backend ships `POST /reactions/`.
+- **AI-assist popover on the dock's "AI" button** (P1 #1). Reads `useCanvas.selectedAtomId` (set by left-clicking any atom) and surfaces **existing** connections involving that atom — accepted reactions + pending ghost keys. Accept / dismiss / jump-to-other-end. Never authors atoms (Invariant I1).
+- **Insights "jump →" pans the camera before expanding** (P1 #5). `WorkshopCanvas.jumpToSubtopic` runs the camera tween (~420 ms) then `expandSubtopic`, so the user sees one continuous motion instead of a jump-cut.
+- **Auth persistence** (P1 #3). `useAuth` is wrapped with `zustand/middleware` `persist` (key `aw.auth.v1`, localStorage). Refresh keeps the user logged in. `/login` auto-redirects to `/` once rehydrated.
 
 Your job:
 
@@ -116,6 +120,32 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
 - [ ] Drop a floater near a collapsed subtopic bubble → the bubble (or the atom) gets nudged so they don't overlap
 - [ ] Drop a streamed atom (voice script) → existing same-topic atoms in its landing area get pushed away; readable spacing remains
 
+#### Right-click reaction menu (P1 #2)
+
+- [ ] Right-click any atom inside an EXPANDED subtopic → popover at cursor with 5 reaction kinds (Support / Challenge / Build-on / Question / Cite)
+- [ ] `Cite` is disabled when there is no literature target reachable in the same subtopic. Hovering shows the explanation tooltip
+- [ ] Picking a kind switches the popover to a target list — siblings in the SAME subtopic, source excluded; for `cite`, only literature
+- [ ] Click a target → popover closes, a new edge of the chosen kind appears live in the ReactionLayer
+- [ ] Esc / outside-click / X closes without committing
+
+#### AI-assist popover (P1 #1)
+
+- [ ] Click an atom card → it gets a subtle ring (selection); the AI button in the dock shows a small badge with the count of related reactions
+- [ ] Click AI in the dock → popover opens above the button with two sections:
+  - **existing reactions**: each row links to the other end (click → camera pans + selects + expands the host subtopic)
+  - **ai suggestions** (pending ghost keys involving the selected atom): accept / dismiss buttons; rationale shown below
+- [ ] With NO atom selected → popover says "Select an atom on the canvas to see its connections"
+- [ ] Copy across the popover never implies it can write a new atom — it always says "surfaces existing connections" (Invariant I1)
+
+#### Insights "jump →" pans before expanding (P1 #5)
+
+- [ ] Open Insights drawer → click any "jump →" link in the TENSION section → camera pans (~400 ms) → THEN the target subtopic morphs open. Single continuous motion, not a jump-cut
+
+#### Auth persistence (P1 #3)
+
+- [ ] On `/login`, click "Continue with Google Scholar" → land on `/`. Refresh — still logged in (no flash of `/login`)
+- [ ] Open DevTools → Application → Local Storage → key `aw.auth.v1` should exist with `{user, profile}`. Clearing it kicks the user back to `/login` on next nav
+
 #### Reaction edges + tooltip
 
 - [ ] Edge endpoints clip to the atom card's RECT EDGE (not the center) with a small outward gap — line should NOT visually pierce through the cards
@@ -190,7 +220,7 @@ Click the listed action, confirm the listed visible result. Any divergence is a 
 | `getUserMedia` mic | **Real** — fires browser permission prompt and starts MediaRecorder. |
 | Audio chunks → backend | Captured but dropped on the floor — backend STT not ready. |
 | OAuth | Mock — drops Sarah into the auth store. |
-| Auth persistence | **Not done** — refresh resets to logged-out (CLAUDE.md §10 P1 #3). |
+| Auth persistence | **Done** — `useAuth` wrapped with `zustand/middleware` `persist` (key `aw.auth.v1`, localStorage). Refresh keeps you logged in. |
 | Crystallize | Local — `customSubtopics` / `customTopics` state. Backend cutover (P1 #8) replaces with server-returned entity. |
 
 ## 5. Architectural quirks the next agent should know
@@ -213,13 +243,13 @@ These are the gotchas you'd otherwise rediscover the hard way. All documented in
 
 ## 6. What to pick up next
 
-[CLAUDE.md](CLAUDE.md) §10 has the full inventory. Recommended order, by ROI:
+[CLAUDE.md](CLAUDE.md) §10 has the full inventory. The "A-batch" (P1 #1, #2, #3, #5 + Hygiene #16) is now shipped on `main`. Remaining P1 items, by ROI:
 
-1. **P1 #3 — Auth persistence** (~1 h). Wrap [src/lib/stores/auth.ts](src/lib/stores/auth.ts) with `zustand/middleware` `persist`. Verify `/login` flow still works after refresh.
-2. **P1 #1 — AI-assist popover on selected atom** (~2 h). Wire the AI button in [StreamingDock.tsx](src/components/dock/StreamingDock.tsx) to a Radix Popover surfacing existing connections only. Invariant I1.
-3. **P1 #2 — Right-click reaction menu on AtomNode** (~2 h). Add support / challenge / build-on / question / cite to another atom (§C.5).
-4. **Hygiene #16 — Sync `docs/contracts/domain-types.md`** (~1 h). Mirror new types from [src/lib/types.ts](src/lib/types.ts) and ping the backend repo. **Do this before backend cutover** — drift is costly to debug.
-5. **P1 #5 — Insights "jump →" pans before expanding** (~1 h).
+1. **P1 #6 — Tour first-time auto-prompt + 30 s idle prompt** (~1 h). [OnboardingTour.tsx](src/components/tour/OnboardingTour.tsx) — §C.7 non-modal "Want me to guide you?". Currently only opens via the Tour button.
+2. **P1 #7 — Empty-state for non-fixture workshops** (~1 h). `useWorkshopOverview` stub in [hooks.ts](src/lib/api/hooks.ts) — w-trust / w-multimodal / w-policy currently render empty canvas. Add a friendly "this workshop has no contributions yet" surface.
+3. **P1 #4 — Route guards** (~1 h). Layout / middleware that redirects `/workshop/[id]`, `/dashboard`, `/proposal/[id]` to `/login` when `useAuth.user == null`. Currently the mock `useMe` papers over the gap.
+4. **P1 #8 — Backend cutover for Crystallize** (paired with backend ship). Replace local `customSubtopics` / `customTopics` with the server-returned canonical entity. See `useCrystallize` in [hooks.ts](src/lib/api/hooks.ts) and §15.5 of [`docs/contracts/domain-types.md`](docs/contracts/domain-types.md).
+5. **Hygiene #17–22** — test suite, error/loading routes, favicon, a11y pass, atomRecords cleanup. Take in any order; they don't interact.
 
 For every one, follow the [CLAUDE.md](CLAUDE.md) §7 checklist:
 

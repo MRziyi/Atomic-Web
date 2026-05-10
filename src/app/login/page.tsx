@@ -8,7 +8,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/stores/auth";
 import { SARAH, SARAH_PROFILE } from "@/lib/api/fixtures";
@@ -16,10 +16,19 @@ import { SARAH, SARAH_PROFILE } from "@/lib/api/fixtures";
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuth((s) => s.setSession);
+  const persistedUser = useAuth((s) => s.user);
+  const hydrated = useAuth((s) => s.hydrated);
   const [busy, setBusy] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualAffiliation, setManualAffiliation] = useState("");
   const [manualTags, setManualTags] = useState("");
+
+  // If localStorage already has a session (auth.ts persist middleware),
+  // skip the login surface entirely. Avoids the visible flash of /login on
+  // every refresh once the user is signed in.
+  useEffect(() => {
+    if (hydrated && persistedUser) router.replace("/");
+  }, [hydrated, persistedUser, router]);
 
   function continueWithScholar() {
     setBusy(true);
